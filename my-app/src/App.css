@@ -1,0 +1,132 @@
+html, body, .App, #root{
+  height: 100%
+}
+
+.App {
+  width: 100%;
+  height: 100%;
+  background-color: #333437;
+}
+
+.musicplayer-container{
+  position: relative;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.circle {
+  border-radius: 50%; /* this makes it a circle */
+}
+
+.inner-disc{
+  position: relative;
+  height: 10vw;
+  width: 10vw;
+  background-color: #262626;
+}
+
+.track-name{
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: -8vw;
+  font-size: 1vw;
+  font-family: 'SF Mono';
+  color: #636669;
+  font-weight: bold;
+}
+
+.pink{
+  color: #FF007A;
+}
+
+.chooseFile{
+  background-color: #FF007A;
+  padding: 0.7vw;
+  width: fit-content;
+  height: fit-content;
+  border-radius: 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  border-radius: 5px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+.chooseFile:active{
+    -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
+     -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
+          box-shadow: inset 0px 0px 5px #c1c1c1;
+   outline: none;
+  
+}
+.chooseFile-text{
+  font-family: 'SF Mono';
+  color: #D1D0C5;
+  font-size: 0.9vw;
+  font-weight: bold;
+  width: 100%;
+  height: min-content;
+  text-align: center;
+}
+
+.chooseFile-subtext{
+  font-family: 'SF Mono';
+  color: #636669;
+  font-size: 0.7vw;
+  font-weight: bold;
+  margin-left: 0.2vw;
+  margin-top: 0.5vw;
+}
+
+
+.Disc {
+  height: 33vw;
+  width: 33vw;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  background-color: #D1D0C5;
+  border-radius: 50%;
+}
+
+.stick{ 
+  position: absolute;
+  top: -15vw;
+  left: 15vw;
+  z-index: 10; /* This ensures the stick is above the disc */
+  width: 40vw; 
+
+  /* Add more styles if needed */
+  animation: swing 2s infinite ;
+}
+
+.vinyl-player{
+  position: relative;
+  zoom: 90%;
+}
+
+
+.rotate{
+
+}
+
+@keyframes swing {
+  0%, 100% { transform:  rotateZ(-20deg); }
+  50% { transform:  rotateZ(10deg); }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
