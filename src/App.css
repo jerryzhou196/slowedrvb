@@ -146,7 +146,7 @@ html, body, .App, #root{
 
 .stick{ 
   position: absolute;
-  top: -15vw;
+  top: -10vw;
   left: 15vw;
   z-index: 10; /* This ensures the stick is above the disc */
   width: 40vw; 

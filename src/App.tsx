@@ -9,20 +9,23 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
-import track1 from "./resources/sauce/Kanye West - Flashing Lights.mp3";
-import track2 from "./resources/sauce/The Neighbourhood - Sweater Weather.mp3";
-import track3 from "./resources/sauce/Beach House - Space Song.mp3";
-import track4 from "./resources/sauce/French Montana - Unforgettable.mp3";
+import track1 from "./resources/sauce/kanye.mp3";
+import track2 from "./resources/sauce/stillwithyou.mp3"
+import track3 from "./resources/sauce/spacesong.mp3";
+import track4 from "./resources/sauce/unforgettable.mp3";
 import track5 from "./resources/sauce/xuehuahua.mp3";
+import track6 from "./resources/sauce/The Neighbourhood - Sweater Weather.mp3";
+
 
 
 let trackIndex: number = 0;
 const tracks = [
-  [track2, "The Neighbourhood - Sweater Weather.mp3"],
-  [track1, "Kanye West - Flashing Lights.mp3"],
-  [track3, "Beach House - Space Song.mp3"],
-  [track4, "French Montana - Unforgettable.mp3"],
-  [track5, "雪花飘飘"],
+  [track6, "the neighbourhood - SWEATER WEATHER"],
+  [track1, "kanye west - FLASHING LIGHTS"],
+  [track4, "french montana - UNFORGETTABLE"],
+  [track2, "to heny 💖"],
+  [track3, "beach house - SPACE SONG"],
+  [track5, "random chinese dude - XUE HUA PIAO PIAO"],
 ];
 
 
@@ -80,7 +83,7 @@ const App: FC = () => {
    // Use Tone.js to create a URL from the Blob
    const url = URL.createObjectURL(blob);
    const tempPlayer = new Tone.Player(
-    {url, playbackRate: 0.75}
+    {url, volume: -10, playbackRate: 0.75}
     ).toDestination();
    // ... (reverb and player initialization remains unchanged)
    const reverb = new Tone.Reverb({
