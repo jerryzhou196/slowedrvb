@@ -10,21 +10,11 @@ import Slider from "@mui/material/Slider";
 
 import track1 from "./resources/sauce/kanye.mp3";
 import track2 from "./resources/sauce/stillwithyou.mp3"
-import track3 from "./resources/sauce/spacesong.mp3";
-import track4 from "./resources/sauce/unforgettable.mp3";
-import track5 from "./resources/sauce/xuehuahua.mp3";
-import track6 from "./resources/sauce/The Neighbourhood - Sweater Weather.mp3";
-
-
 
 let trackIndex: number = 0;
 const tracks = [
-  [track6, "the neighbourhood - SWEATER WEATHER"],
   [track1, "kanye west - FLASHING LIGHTS"],
-  [track4, "french montana - UNFORGETTABLE"],
   [track2, "to heny 💖"],
-  [track3, "beach house - SPACE SONG"],
-  [track5, "random chinese dude - XUE HUA PIAO PIAO"],
 ];
 
 
