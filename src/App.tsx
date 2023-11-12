@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, FC, useEffect } from "react";
+import React, { useState, useCallback, useRef, FC } from "react";
 import "./App.css";
 import VinylStick from "./resources/stick.svg";
 import Pause from "./resources/pause.svg";
