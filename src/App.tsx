@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useRef, FC, useEffect } from "react";
-import logo from "./logo.svg";
 import "./App.css";
 import VinylStick from "./resources/stick.svg";
 import Pause from "./resources/pause.svg";
@@ -35,14 +34,13 @@ const App: FC = () => {
     const [fileName, setFileName] = useState<String >("");
     const [player, setPlayer] = useState<Tone.Player | null>(null);
     const [reverb, setReverb] = useState<Tone.Reverb | null>(null);
-    const [decay, setDecay] = useState<Number>(1);
-    const [playbackRate, setPlaybackRate] = useState<Number>(1);
     const [playing, setPlaying] = useState<Boolean>(false);
 
   
     useEffect(() => {
-          loadRandomSong();
-    },[])
+      loadRandomSong();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
   stopMusic();
@@ -180,6 +178,7 @@ const App: FC = () => {
     }
 
 
+    
  const loadRandomSong = () => {
    // Fetch the array buffer of the randomly selected track
    stopMusic();
@@ -243,6 +242,7 @@ const App: FC = () => {
           <img src={VinylStick} alt="Vinyl Stick" className="stick" />
           <img
             id="playback"
+            alt="Play Button"
             src={playing ? Pause : Play}
             onClick={handlePlaying}
             className="playback-button"
