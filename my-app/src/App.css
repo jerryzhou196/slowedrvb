@@ -3,17 +3,28 @@ html, body, .App, #root{
 }
 
 .App {
+  display: flex;
   width: 100%;
   height: 100%;
   background-color: #333437;
+  justify-content: center;
 }
 
 .musicplayer-container{
   position: relative;
-  width: 50%;
+  width: min-content;
   height: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.slowreverb-controls {
+  position: relative;
+  width: min-content;
+  height: 100%;
+  display: flex;
   align-items: center;
 }
 
@@ -43,8 +54,25 @@ html, body, .App, #root{
   color: #FF007A;
 }
 
-.chooseFile{
+.sauceMeUp{
+    cursor: pointer;
   background-color: #FF007A;
+  padding: 0.7vw;
+  margin-bottom: 1vw;
+  width: fit-content;
+  height: fit-content;
+  border-radius: 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  border-radius: 5px;
+  box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+  
+.chooseFile{
+  cursor: pointer;
+  background-color: #E2B713;
   padding: 0.7vw;
   width: fit-content;
   height: fit-content;
@@ -56,7 +84,15 @@ html, body, .App, #root{
   border-radius: 5px;
   box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
-.chooseFile:active{
+
+
+.chooseFile:active {
+    -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
+     -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
+          box-shadow: inset 0px 0px 5px #c1c1c1;
+   outline: none;
+}
+.sauceMeUp:active {
     -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
      -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
           box-shadow: inset 0px 0px 5px #c1c1c1;
@@ -65,9 +101,19 @@ html, body, .App, #root{
 }
 .chooseFile-text{
   font-family: 'SF Mono';
+  color: black;
+  font-size: 0.9vw;
+  font-weight: 700;
+  width: 100%;
+  height: min-content;
+  text-align: center;
+}
+
+.sauceMeUp-text{
+  font-family: 'SF Mono';
   color: #D1D0C5;
   font-size: 0.9vw;
-  font-weight: bold;
+  font-weight: 700;
   width: 100%;
   height: min-content;
   text-align: center;
@@ -94,6 +140,10 @@ html, body, .App, #root{
   border-radius: 50%;
 }
 
+.rotate {
+    animation: rotate var(--rotation-duration) linear infinite;
+}
+
 .stick{ 
   position: absolute;
   top: -15vw;
@@ -106,18 +156,60 @@ html, body, .App, #root{
 }
 
 .vinyl-player{
+  width: 100%;
   position: relative;
   zoom: 90%;
+  margin-right: 60px;
 }
 
-
-.rotate{
-
+.slider1-container{
+  margin-right: 2vw;
+  margin-left: 2vw;
+  height: min-content;
+  width: fit-content;
+  padding: 5px;
+  padding-top: 15px;
+  background-color: #636669;
+  border-radius: 5px;
+  display: flex;
+  flex-flow: wrap;
+  justify-content: center;
 }
+
+.slider2-container{
+  height: min-content;
+  width: fit-content;
+  padding: 5px;
+  padding-top: 15px;
+  background-color: #2C2E31;
+  border-radius: 5px;
+  display: flex;
+  flex-flow: wrap;
+  justify-content: center;
+}
+
+.slider-container{
+  width: 100%;
+  display: flex;
+}
+
+.control-label {
+  width: 100%;
+  margin-top: 1vw;
+  text-align: center;
+  font-size: 1vw;
+  font-family: 'SF Mono';
+  font-weight: 700;
+}
+
 
 @keyframes swing {
   0%, 100% { transform:  rotateZ(-20deg); }
   50% { transform:  rotateZ(10deg); }
+}
+
+:root {
+  --rotation-duration: 1s; /* Initial value, can be changed via JavaScript */
 }
 
 @keyframes rotate {
@@ -128,5 +220,13 @@ html, body, .App, #root{
     transform: rotate(360deg);
   }
 }
+
+.playback-button{
+  width: 100%;
+  width: 4vw;
+  cursor: pointer; 
+}
+
+
 
 
