@@ -8,11 +8,9 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
-import track2 from "./resources/sauce/stillwithyou.mp3"
-
 let trackIndex: number = 0;
 const tracks = [
-  [track2, "to heny 💖"],
+  ["https://d3m8x313oqkwp.cloudfront.net/Infrunami.mp3", "to heny 💖"],
 ];
 
 
