@@ -8,12 +8,10 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
-import track1 from "./resources/sauce/kanye.mp3";
 import track2 from "./resources/sauce/stillwithyou.mp3"
 
 let trackIndex: number = 0;
 const tracks = [
-  [track1, "kanye west - FLASHING LIGHTS"],
   [track2, "to heny 💖"],
 ];
 
