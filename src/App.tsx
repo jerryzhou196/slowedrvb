@@ -8,9 +8,20 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
+const url = "https://d3m8x313oqkwp.cloudfront.net/"
+
 let trackIndex: number = 0;
 const tracks = [
-  ["https://d3m8x313oqkwp.cloudfront.net/Infrunami.mp3", "to heny 💖"],
+  ["kanye.mp3", "kanye west - FLASHING LIGHTS"],
+  ["stillwithyou.mp3", "to heny 💖"],
+  ["mitsiki.mp3", "mitski - MY LOVE MINE ALL MINE"],
+  ["rapsnitches.mp3", "mf doom - RAP SNITCHES"],
+  ["blindinglights.mp3", "the weeknd - BLINDING LIGHTS"],
+  ["newperson.mp3", "tame impala - track 1"],
+  ["eventually.mp3", "tame impala - track 2"],
+  ["romantic.mp3", "yu yu hakusho - romantic"],
+  ["spacesong.mp3", "beach house - SPACE SONG"],
+  ["unforgettable.mp3", "french montana - UNFORGETTABLE"],
 ];
 
 
@@ -171,18 +182,17 @@ useEffect(() => {
    const track = tracks[trackIndex % tracks.length];
    trackIndex += 1;
 
-   fetch(track[0])
+   fetch(url + track[0])
      .then((response) => response.arrayBuffer())
      .then((arrayBuffer) => {
        const blob = new Blob([arrayBuffer], { type: "audio/mp3" });
-      setAudioBlob(blob);
-      setFileName(track[1])
-      if (player){
-        changePlayerSong(blob, player);
-      } else {
-        initializePlayer(blob);
-      }
-
+       setAudioBlob(blob);
+       setFileName(track[1]);
+       if (player) {
+         changePlayerSong(blob, player);
+       } else {
+         initializePlayer(blob);
+       }
      })
      .catch((error) => {
        console.error("Error loading track:", error);
