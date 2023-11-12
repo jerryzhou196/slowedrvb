@@ -37,10 +37,7 @@ const App: FC = () => {
     const [playing, setPlaying] = useState<Boolean>(false);
 
   
-    useEffect(() => {
-      loadRandomSong();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+
 
  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
   stopMusic();
