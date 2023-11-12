@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, FC } from "react";
+import React, { useState, useCallback, useRef, FC, useEffect } from "react";
 import "./App.css";
 import VinylStick from "./resources/stick.svg";
 import Pause from "./resources/pause.svg";
@@ -164,7 +164,10 @@ const App: FC = () => {
       }
     }
 
-
+useEffect(() => {
+  loadRandomSong();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+},[])
     
  const loadRandomSong = () => {
    // Fetch the array buffer of the randomly selected track
