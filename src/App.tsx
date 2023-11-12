@@ -12,10 +12,10 @@ const url = "https://d3m8x313oqkwp.cloudfront.net/"
 
 let trackIndex: number = 0;
 const tracks = [
-  ["kanye.mp3", "kanye west - FLASHING LIGHTS"],
-  ["stillwithyou.mp3", "to heny 💖"],
-  ["mitsiki.mp3", "mitski - MY LOVE MINE ALL MINE"],
   ["blindinglights.mp3", "the weeknd - BLINDING LIGHTS"],
+  ["kanye.mp3", "kanye west - FLASHING LIGHTS"],
+  ["mitsiki.mp3", "mitski - MY LOVE MINE ALL MINE"],
+  ["stillwithyou.mp3", "to heny 💖"],
   ["newperson.mp3", "tame impala - track 1"],
   ["eventually.mp3", "tame impala - track 2"],
   ["romantic.mp3", "yu yu hakusho - romantic"],
