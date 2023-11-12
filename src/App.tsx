@@ -15,13 +15,13 @@ const tracks = [
   ["kanye.mp3", "kanye west - FLASHING LIGHTS"],
   ["stillwithyou.mp3", "to heny 💖"],
   ["mitsiki.mp3", "mitski - MY LOVE MINE ALL MINE"],
-  ["rapsnitches.mp3", "mf doom - RAP SNITCHES"],
   ["blindinglights.mp3", "the weeknd - BLINDING LIGHTS"],
   ["newperson.mp3", "tame impala - track 1"],
   ["eventually.mp3", "tame impala - track 2"],
   ["romantic.mp3", "yu yu hakusho - romantic"],
   ["spacesong.mp3", "beach house - SPACE SONG"],
   ["unforgettable.mp3", "french montana - UNFORGETTABLE"],
+  ["rapsnitches.mp3", "mf doom - RAP SNITCHES"],
 ];
 
 
@@ -182,22 +182,49 @@ useEffect(() => {
    const track = tracks[trackIndex % tracks.length];
    trackIndex += 1;
 
-   fetch(url + track[0])
-     .then((response) => response.arrayBuffer())
-     .then((arrayBuffer) => {
-       const blob = new Blob([arrayBuffer], { type: "audio/mp3" });
-       setAudioBlob(blob);
-       setFileName(track[1]);
-       if (player) {
-         changePlayerSong(blob, player);
-       } else {
-         initializePlayer(blob);
-       }
-     })
-     .catch((error) => {
-       console.error("Error loading track:", error);
-     });
+   // Define the cache name
+   const cacheName = "track-cache";
+
+   // Construct the full URL for the track
+   const trackUrl = url + track[0];
+
+   // Check the cache first, then network
+   caches.open(cacheName).then((cache) => {
+     cache
+       .match(trackUrl)
+       .then((cachedResponse) => {
+         if (cachedResponse) {
+           // If the track is in the cache, use it
+           return cachedResponse.blob();
+         } else {
+           // Otherwise, fetch from the network and cache the response
+           return fetch(trackUrl)
+             .then((networkResponse) => {
+               cache.put(trackUrl, networkResponse.clone());
+               return networkResponse.blob();
+             })
+             .catch((error) => {
+               console.error("Error loading track:", error);
+             });
+         }
+       })
+       .then((blob) => {
+        if (blob){
+                   // Play the track
+         setAudioBlob(blob);
+         setFileName(track[1]);
+         if (player) {
+           changePlayerSong(blob, player);
+         } else {
+           initializePlayer(blob);
+         }
+
+        }
+
+       });
+   });
  };
+ 
 
 
 
@@ -274,7 +301,7 @@ useEffect(() => {
               onChange={handleSpeedChange}
               min={0}
               step={0.01}
-              max={2}
+              max={1.5}
             />
             <span className="control-label" style={{ color: "#D1D0C5" }}>
               speed
