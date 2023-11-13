@@ -4,10 +4,12 @@ html, body, .App, #root{
 
 .App {
   display: flex;
+  position: relative;
   width: 100%;
   height: 100%;
   background-color: #333437;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .musicplayer-container{
@@ -226,6 +228,54 @@ html, body, .App, #root{
   width: 4vw;
   cursor: pointer; 
 }
+
+
+.header-label{
+  position: absolute;
+  width: 100%;
+  height: min-content;
+  text-align: left;
+}
+
+.header-label-title{
+  color: #D1D0C5;
+  font-family: 'SF Mono';
+  font-weight: 700;
+  font-size: 2vw;
+  width: 100%;
+}
+
+.header-label-subtitle{
+  width: 100%;
+  color: #636669;
+  font-family: 'Share Tech';
+  font-weight: 700;
+  font-size: 1vw;
+}
+
+.header-label-container{
+  display: flex;
+  justify-content: center;
+  margin: 1vw;
+
+ flex-wrap: wrap;
+}
+
+
+@media (min-aspect-ratio: 2/1) {
+  /* Your CSS styles for when the aspect ratio is greater than 1:2 go here */
+  .App{
+    zoom: 60%
+
+  }
+
+
+
+
+  /* You can add additional styles for other elements as needed */
+}
+
+
 
 
 

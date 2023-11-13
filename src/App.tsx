@@ -8,6 +8,8 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
+const unmuteAudio = require("unmute-ios-audio");
+
 const url = "https://d3m8x313oqkwp.cloudfront.net/"
 
 let trackIndex: number = 0;
@@ -75,11 +77,11 @@ const App: FC = () => {
    // Use Tone.js to create a URL from the Blob
    const url = URL.createObjectURL(blob);
    const tempPlayer = new Tone.Player(
-    {url, volume: -10, playbackRate: 0.75}
+    {url, volume: -10, playbackRate: 0.75, loop: true}
     ).toDestination();
    // ... (reverb and player initialization remains unchanged)
    const reverb = new Tone.Reverb({
-    decay: 20, 
+    decay: 30, 
     wet: 0.75,
     preDelay: 0.1,
    }).toDestination();
@@ -163,6 +165,7 @@ const App: FC = () => {
         stopMusic();
         document.getElementById("#Disc")?.classList.remove("rotate")
       } else if (player && !playing){
+        unmuteAudio();
         setPlaying(true);
         player.start();
         document.getElementById("Disc")?.classList.add("rotate");
@@ -230,6 +233,12 @@ useEffect(() => {
 
   return (
     <div className="App">
+      <header className="header-label">
+        <div className="header-label-container">
+          <div className="header-label-subtitle"> a jerry zhou project</div>
+          <div className="header-label-title"> slowedrvb.com </div >
+        </div>
+      </header>
       <div className="musicplayer-container">
         <div className="vinyl-player">
           <div style={{ width: "100%" }}>
