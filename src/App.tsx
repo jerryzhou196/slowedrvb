@@ -12,7 +12,6 @@ import { unmute } from './unmute'; // Adjust the path according to your file str
 
 
 const url = "https://d3m8x313oqkwp.cloudfront.net/"
-
 let trackIndex: number = 0;
 const tracks = [
   ["blindinglights.mp3", "the weeknd - BLINDING LIGHTS"],
@@ -20,11 +19,20 @@ const tracks = [
   ["mitsiki.mp3", "mitski - MY LOVE MINE ALL MINE"],
   ["stillwithyou.mp3", "to heny 💖"],
   ["newperson.mp3", "tame impala - track 1"],
-  ["eventually.mp3", "tame impala - track 2"],
   ["romantic.mp3", "yu yu hakusho - romantic"],
   ["spacesong.mp3", "beach house - SPACE SONG"],
   ["unforgettable.mp3", "french montana - UNFORGETTABLE"],
   ["rapsnitches.mp3", "mf doom - RAP SNITCHES"],
+  ["hozier.mp3","hozier - TAKE ME TO CHURCH"],
+  ["simpson.mp3","simpsonwave 1994"],
+  ["resonance.mp3","home - RESONANCEb"],
+  ["5tint.mp3","travis scott - 5% TINT"],
+  ["twoofus.mp3","bill withers - JUST THE TWO OF US"],
+  ["here.mp3","alessia cara - HERE"],
+  ["sunflower.mp3","post malone - SUNFLOWER"],
+  ["less.mp3","tame impala - THE LESS I KNOW THE BETTER"],
+  ["dancin.mp3","aaron smith - DANCIN"],
+  ["reflection.mp3","mac de marco - CHAMBER OF REFLECTION"],
 ];
 
 
@@ -35,9 +43,6 @@ const App: FC = () => {
     const [player, setPlayer] = useState<Tone.Player | null>(null);
     const [reverb, setReverb] = useState<Tone.Reverb | null>(null);
     const [playing, setPlaying] = useState<Boolean>(false);
-
-  
-
 
  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
   stopMusic();
@@ -346,7 +351,7 @@ useEffect(() => {
               valueLabelDisplay="auto"
               onChange={handleReverbChange}
               step={0.01}
-              min={0.1}
+              min={0}
               max={1}
             />
             <span className="control-label" style={{ color: "#646669" }}>
