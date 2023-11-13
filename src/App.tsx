@@ -75,6 +75,7 @@ const App: FC = () => {
 
  const initializePlayer = (blob: Blob) => {
    // Use Tone.js to create a URL from the Blob
+    unmuteAudio();
    const url = URL.createObjectURL(blob);
    const tempPlayer = new Tone.Player(
     {url, volume: -10, playbackRate: 0.75, loop: true}
