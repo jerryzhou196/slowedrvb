@@ -132,7 +132,7 @@ export function unmute(context, allowBackgroundPlayback = false, forceIOSBehavio
         else {
             // Want to be suspended, so try suspending
             if (context.state === "running") {
-                var p = context.suspend();
+                p = context.suspend();
                 if (p)
                     p.then(noop, noop).catch(noop);
             }
