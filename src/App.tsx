@@ -166,10 +166,10 @@ const App: FC = () => {
         stopMusic();
         document.getElementById("#Disc")?.classList.remove("rotate")
       } else if (player && !playing){
-        unmute(player.context.rawContext)
         console.log("audioContext", player.context.rawContext);
         setPlaying(true);
         player.start();
+        unmute(player.context.rawContext);
         document.getElementById("Disc")?.classList.add("rotate");
       } else if (audioBlob) {
         runPlayer(audioBlob);
