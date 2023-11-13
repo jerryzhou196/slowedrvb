@@ -80,6 +80,7 @@ const App: FC = () => {
    const tempPlayer = new Tone.Player(
     {url, volume: -10, playbackRate: 0.75, loop: true}
     ).toDestination();
+    unmute(tempPlayer.context.rawContext);
    // ... (reverb and player initialization remains unchanged)
    const reverb = new Tone.Reverb({
     decay: 30, 
@@ -167,9 +168,10 @@ const App: FC = () => {
         document.getElementById("#Disc")?.classList.remove("rotate")
       } else if (player && !playing){
         console.log("audioContext", player.context.rawContext);
+        console.log("audioContext", Tone.getContext().rawContext);
         setPlaying(true);
         player.start();
-        unmute(player.context.rawContext);
+
         document.getElementById("Disc")?.classList.add("rotate");
       } else if (audioBlob) {
         runPlayer(audioBlob);
