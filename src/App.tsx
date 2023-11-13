@@ -8,7 +8,8 @@ import { useDropzone } from "react-dropzone";
 import * as Tone from "tone";
 import Slider from "@mui/material/Slider";
 
-const unmuteAudio = require("unmute-ios-audio");
+import { unmute } from './unmute'; // Adjust the path according to your file structure
+
 
 const url = "https://d3m8x313oqkwp.cloudfront.net/"
 
@@ -75,7 +76,6 @@ const App: FC = () => {
 
  const initializePlayer = (blob: Blob) => {
    // Use Tone.js to create a URL from the Blob
-    unmuteAudio();
    const url = URL.createObjectURL(blob);
    const tempPlayer = new Tone.Player(
     {url, volume: -10, playbackRate: 0.75, loop: true}
@@ -166,7 +166,7 @@ const App: FC = () => {
         stopMusic();
         document.getElementById("#Disc")?.classList.remove("rotate")
       } else if (player && !playing){
-        unmuteAudio();
+        unmute(player.context.rawContext)
         setPlaying(true);
         player.start();
         document.getElementById("Disc")?.classList.add("rotate");
