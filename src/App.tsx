@@ -80,7 +80,7 @@ const App: FC = () => {
    const tempPlayer = new Tone.Player(
     {url, volume: -10, playbackRate: 0.75, loop: true}
     ).toDestination();
-    unmute(tempPlayer.context.rawContext);
+    unmute(tempPlayer.context.rawContext, true, false);
    // ... (reverb and player initialization remains unchanged)
    const reverb = new Tone.Reverb({
     decay: 30, 
