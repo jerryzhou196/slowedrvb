@@ -262,10 +262,11 @@ html, body, .App, #root{
 }
 
 
-@media (min-aspect-ratio: 2/1) {
+@media (min-aspect-ratio: 2.5/1) {
   /* Your CSS styles for when the aspect ratio is greater than 1:2 go here */
   .App{
-    zoom: 50%
+    zoom: 30%;
+    background-color: red;
 
   }
 
