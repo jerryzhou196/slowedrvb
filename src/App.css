@@ -1,5 +1,8 @@
-html, body, .App, #root{
-  height: 100%
+html,
+body,
+.App,
+#root {
+  height: 100%;
 }
 
 .App {
@@ -12,7 +15,7 @@ html, body, .App, #root{
   flex-wrap: wrap;
 }
 
-.musicplayer-container{
+.musicplayer-container {
   position: relative;
   width: min-content;
   height: 100%;
@@ -34,31 +37,31 @@ html, body, .App, #root{
   border-radius: 50%; /* this makes it a circle */
 }
 
-.inner-disc{
+.inner-disc {
   position: relative;
   height: 10vw;
   width: 10vw;
   background-color: #262626;
 }
 
-.track-name{
+.track-name {
   position: absolute;
   width: 100%;
   text-align: center;
   top: -8vw;
   font-size: 1vw;
-  font-family: 'SF Mono';
+  font-family: "SF Mono";
   color: #636669;
   font-weight: bold;
 }
 
-.pink{
-  color: #FF007A;
+.pink {
+  color: #ff007a;
 }
 
-.sauceMeUp{
-    cursor: pointer;
-  background-color: #FF007A;
+.sauceMeUp {
+  cursor: pointer;
+  background-color: #ff007a;
   padding: 0.7vw;
   margin-bottom: 1vw;
   width: fit-content;
@@ -71,10 +74,10 @@ html, body, .App, #root{
   border-radius: 5px;
   box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
-  
-.chooseFile{
+
+.chooseFile {
   cursor: pointer;
-  background-color: #E2B713;
+  background-color: #e2b713;
   padding: 0.7vw;
   width: fit-content;
   height: fit-content;
@@ -87,22 +90,20 @@ html, body, .App, #root{
   box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
 
-
 .chooseFile:active {
-    -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
-     -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
-          box-shadow: inset 0px 0px 5px #c1c1c1;
-   outline: none;
+  -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
+  -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
+  box-shadow: inset 0px 0px 5px #c1c1c1;
+  outline: none;
 }
 .sauceMeUp:active {
-    -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
-     -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
-          box-shadow: inset 0px 0px 5px #c1c1c1;
-   outline: none;
-  
+  -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
+  -moz-box-shadow: inset 0px 0px 5px #c1c1c1;
+  box-shadow: inset 0px 0px 5px #c1c1c1;
+  outline: none;
 }
-.chooseFile-text{
-  font-family: 'SF Mono';
+.chooseFile-text {
+  font-family: "SF Mono";
   color: black;
   font-size: 0.9vw;
   font-weight: 700;
@@ -111,9 +112,9 @@ html, body, .App, #root{
   text-align: center;
 }
 
-.sauceMeUp-text{
-  font-family: 'SF Mono';
-  color: #D1D0C5;
+.sauceMeUp-text {
+  font-family: "SF Mono";
+  color: #d1d0c5;
   font-size: 0.9vw;
   font-weight: 700;
   width: 100%;
@@ -121,15 +122,14 @@ html, body, .App, #root{
   text-align: center;
 }
 
-.chooseFile-subtext{
-  font-family: 'SF Mono';
+.chooseFile-subtext {
+  font-family: "SF Mono";
   color: #636669;
   font-size: 0.7vw;
   font-weight: bold;
   margin-left: 0.2vw;
   margin-top: 0.5vw;
 }
-
 
 .Disc {
   height: 33vw;
@@ -138,33 +138,33 @@ html, body, .App, #root{
   justify-content: center;
   flex-wrap: wrap;
   align-items: center;
-  background-color: #D1D0C5;
+  background-color: #d1d0c5;
   border-radius: 50%;
 }
 
 .rotate {
-    animation: rotate var(--rotation-duration) linear infinite;
+  animation: rotate var(--rotation-duration) linear infinite;
 }
 
-.stick{ 
+.stick {
   position: absolute;
   top: -10vw;
   left: 15vw;
   z-index: 10; /* This ensures the stick is above the disc */
-  width: 40vw; 
+  width: 40vw;
 
   /* Add more styles if needed */
-  animation: swing 2s infinite ;
+  animation: swing 2s infinite;
 }
 
-.vinyl-player{
+.vinyl-player {
   width: 100%;
   position: relative;
   zoom: 90%;
   margin-right: 60px;
 }
 
-.slider1-container{
+.slider1-container {
   margin-right: 2vw;
   margin-left: 2vw;
   height: min-content;
@@ -178,19 +178,19 @@ html, body, .App, #root{
   justify-content: center;
 }
 
-.slider2-container{
+.slider2-container {
   height: min-content;
   width: fit-content;
   padding: 5px;
   padding-top: 15px;
-  background-color: #2C2E31;
+  background-color: #2c2e31;
   border-radius: 5px;
   display: flex;
   flex-flow: wrap;
   justify-content: center;
 }
 
-.slider-container{
+.slider-container {
   width: 100%;
   display: flex;
 }
@@ -200,14 +200,18 @@ html, body, .App, #root{
   margin-top: 1vw;
   text-align: center;
   font-size: 1vw;
-  font-family: 'SF Mono';
+  font-family: "SF Mono";
   font-weight: 700;
 }
 
-
 @keyframes swing {
-  0%, 100% { transform:  rotateZ(-20deg); }
-  50% { transform:  rotateZ(10deg); }
+  0%,
+  100% {
+    transform: rotateZ(-20deg);
+  }
+  50% {
+    transform: rotateZ(10deg);
+  }
 }
 
 :root {
@@ -223,61 +227,61 @@ html, body, .App, #root{
   }
 }
 
-.playback-button{
+.playback-button {
   width: 100%;
   width: 4vw;
-  cursor: pointer; 
+  cursor: pointer;
 }
 
-
-.header-label{
+.header-label {
   position: absolute;
   width: 100%;
   height: min-content;
   text-align: left;
 }
 
-.header-label-title{
-  color: #D1D0C5;
-  font-family: 'SF Mono';
+.header-label-title {
+  color: #d1d0c5;
+  font-family: "SF Mono";
   font-weight: 700;
   font-size: 2vw;
   width: 100%;
 }
 
-.header-label-subtitle{
+.header-label-subtitle {
   width: 100%;
   color: #636669;
-  font-family: 'Share Tech';
+  font-family: "Share Tech";
   font-weight: 700;
   font-size: 1vw;
 }
 
-.header-label-container{
+.header-label-container {
   display: flex;
   justify-content: center;
   margin: 1vw;
 
- flex-wrap: wrap;
+  flex-wrap: wrap;
 }
-
 
 @media (min-aspect-ratio: 2.5/1) {
   /* Your CSS styles for when the aspect ratio is greater than 1:2 go here */
-  .App{
+  .App {
     zoom: 30%;
     background-color: red;
-
   }
-
-
-
-
-  /* You can add additional styles for other elements as needed */
 }
 
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-
-
-
-
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}

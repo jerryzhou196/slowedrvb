@@ -4,19 +4,21 @@ import VinylStick from "./resources/stick.svg";
 import Pause from "./resources/pause.svg";
 import Play from "./resources/play.svg";
 
-import Slider from "@mui/material/Slider";
+import Sliders from "./components/Sliders";
 
 import { useTracks, Track } from "./hooks/useTracks";
 import { useTonePlayer } from "./hooks/useTonePlayer";
 
 const App: FC = () => {
-  const [reverbAmount, setReverbAmount] = useState(0.5);
+  const [reverb, setReverbAmount] = useState(0.1);
   const [speed, setSpeedAmount] = useState(1.0);
+  const [fileURL, setFileURL] = useState("");
   const [fileName, setFileName] = useState("");
 
   const { getRandomTrack, getNextTrack } = useTracks();
+
   const { isLoaded, togglePlay, setReverb, setSpeed, isPlaying } =
-    useTonePlayer(fileName, speed, reverbAmount);
+    useTonePlayer(fileURL, reverb, speed);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,13 +32,15 @@ const App: FC = () => {
 
       if (cachedResponse) {
         const blob = await cachedResponse.blob();
-        setFileName(URL.createObjectURL(blob));
+        setFileName(track.name);
+        setFileURL(URL.createObjectURL(blob));
         return;
       }
 
       const networkResponse = await fetch(trackUrl);
       const blob = await networkResponse.blob();
-      setFileName(URL.createObjectURL(blob));
+      setFileName(track.name);
+      setFileURL(URL.createObjectURL(blob));
       await cache.put(trackUrl, networkResponse.clone());
     } catch (err) {
       console.error("Error fetching track:", err);
@@ -57,7 +61,7 @@ const App: FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const blob = new Blob([file], { type: file.type });
-      setFileName(URL.createObjectURL(blob));
+      setFileURL(URL.createObjectURL(blob));
     }
   };
 
@@ -70,6 +74,7 @@ const App: FC = () => {
   ) => {
     if (typeof value == "number" && isLoaded) {
       const spinSpeed = 1 / value;
+      setSpeedAmount(value);
       document.documentElement.style.setProperty(
         "--rotation-duration",
         `${spinSpeed}s`
@@ -85,7 +90,6 @@ const App: FC = () => {
   ) => {
     if (typeof value == "number" && isLoaded) {
       setReverbAmount(value);
-      setReverb(value);
     }
   };
 
@@ -101,15 +105,7 @@ const App: FC = () => {
         <div className="vinyl-player">
           <div style={{ width: "100%" }}>
             <div style={{ marginBottom: "1vw" }}>
-              <button
-                className="sauceMeUp"
-                onClick={() => {
-                  const track: Track = getRandomTrack();
-                  const trackUrl =
-                    "https://d3m8x313oqkwp.cloudfront.net/" + track.file;
-                  setFileName(trackUrl);
-                }}
-              >
+              <button className="sauceMeUp" onClick={fetchRandomTrack}>
                 <span className="sauceMeUp-text" onClick={fetchRandomTrack}>
                   sauce me up
                 </span>
@@ -146,75 +142,12 @@ const App: FC = () => {
         </div>
       </div>
 
-      <div className="slowreverb-controls">
-        <div className="slider-container">
-          <div className="slider1-container" style={{ height: "100%" }}>
-            <Slider
-              orientation="vertical"
-              valueLabelDisplay="auto"
-              sx={{
-                zIndex: "20",
-                color: "#2C2E31",
-                width: "2vw",
-                height: "30vw",
-                maxHeight: "500px",
-                "& .MuiSlider-thumb": {
-                  borderRadius: "5px",
-                  width: "3vw",
-                  color: "#FF007A",
-                },
-                "& .MuiSlider-valueLabel": {
-                  fontFamily: "Sf Mono",
-                },
-              }}
-              valueLabelFormat={(value: number) => {
-                return (value * 100).toFixed(0).toString() + "%";
-              }}
-              defaultValue={0.5}
-              onChange={handleSpeedChange}
-              min={0}
-              step={0.01}
-              max={1.5}
-            />
-            <span className="control-label" style={{ color: "#D1D0C5" }}>
-              speed
-            </span>
-          </div>
-
-          <div className="slider2-container" style={{ height: "100%" }}>
-            <Slider
-              orientation="vertical"
-              sx={{
-                zIndex: "20",
-                color: "#636669",
-                width: "2vw",
-                height: "30vw",
-                maxHeight: "500px",
-                "& .MuiSlider-thumb": {
-                  borderRadius: "5px",
-                  width: "3vw",
-                  color: "#FF007A",
-                },
-                "& .MuiSlider-valueLabel": {
-                  fontFamily: "Sf Mono",
-                },
-              }}
-              valueLabelFormat={(value: number) => {
-                return (value * 100).toFixed(0).toString() + "%";
-              }}
-              defaultValue={0.75}
-              valueLabelDisplay="auto"
-              onChange={handleReverbChange}
-              step={0.01}
-              min={0}
-              max={1}
-            />
-            <span className="control-label" style={{ color: "#646669" }}>
-              reverb
-            </span>
-          </div>
-        </div>
-      </div>
+      <Sliders
+        speed={speed}
+        reverb={reverb}
+        onSpeedChange={handleSpeedChange}
+        onReverbChange={handleReverbChange}
+      />
     </div>
   );
 };

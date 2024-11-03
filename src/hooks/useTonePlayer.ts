@@ -40,10 +40,10 @@ export const useTonePlayer = (
         playerRef.current = new Tone.Player({
           autostart: false,
           loop: true,
-          playbackRate: 1.5,
+          playbackRate: speed,
           fadeIn: 0.5,
           fadeOut: 0.5,
-          volume: -6, // in decibels
+          volume: -10, // in decibels
           mute: false,
         }).toDestination();
 
