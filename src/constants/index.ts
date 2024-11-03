@@ -1,5 +1,16 @@
 import { PlayerOptions } from "tone";
 
+interface Track {
+  filename: string;
+  title: string;
+}
+
+interface ReverbOptions {
+  decay: number;
+  wet: number;
+  preDelay: number;
+}
+
 export const AUDIO_URL = "https://d3m8x313oqkwp.cloudfront.net/";
 
 export const TRACKS: Track[] = [

@@ -15,10 +15,10 @@ const App: FC = () => {
   const [fileName, setFileName] = useState("");
 
   const { getRandomTrack, getNextTrack } = useTracks();
-  const { isLoaded, isPlaying, togglePlay, setReverb, setSpeed } = useTonePlayer(fileName, speed, reverbAmount);
+  const { isLoaded, togglePlay, setReverb, setSpeed, isPlaying } =
+    useTonePlayer(fileName, speed, reverbAmount);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   const fetchRandomTrack = useCallback(async () => {
     try {
@@ -47,45 +47,44 @@ const App: FC = () => {
     fetchRandomTrack();
   }, [fetchRandomTrack]); // Dependency is stable
 
-  // Event Handlers
-
-
   // File Input Event Handlers
 
   const handleChooseFile = () => {
     fileInputRef.current?.click();
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFileName(URL.createObjectURL(file));
+      const blob = new Blob([file], { type: file.type });
+      setFileName(URL.createObjectURL(blob));
     }
-  }
+  };
 
   // Slider Event Handlers
 
   const handleSpeedChange = (
-        event: Event,
-        value: number[] | number,
-        activeThumb: number
+    event: Event,
+    value: number[] | number,
+    activeThumb: number
   ) => {
     if (typeof value == "number" && isLoaded) {
       const spinSpeed = 1 / value;
       document.documentElement.style.setProperty(
         "--rotation-duration",
         `${spinSpeed}s`
-    );
-    setSpeed(value);
-  }
+      );
+      setSpeed(value);
+    }
   };
 
   const handleReverbChange = (
     event: Event,
-    value: number[] | number,
+    value: number | number[],
     activeThumb: number
   ) => {
     if (typeof value == "number" && isLoaded) {
+      setReverbAmount(value);
       setReverb(value);
     }
   };
@@ -111,7 +110,9 @@ const App: FC = () => {
                   setFileName(trackUrl);
                 }}
               >
-                <span className="sauceMeUp-text" onClick={fetchRandomTrack}>sauce me up</span>
+                <span className="sauceMeUp-text" onClick={fetchRandomTrack}>
+                  sauce me up
+                </span>
               </button>
               <button className="chooseFile" onClick={handleChooseFile}>
                 <span className="chooseFile-text">choose mp3 file</span>
@@ -129,10 +130,7 @@ const App: FC = () => {
               </div>
             </div>
           </div>
-          <div
-            id="Disc"
-            className={`Disc circle ${isPlaying ? "rotate" : ""}`}
-          >
+          <div id="Disc" className={`Disc circle ${isPlaying ? "rotate" : ""}`}>
             <div className="inner-disc circle">
               <span className="track-name"> {fileName}</span>
             </div>

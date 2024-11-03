@@ -5,7 +5,10 @@ import {
   useState,
   MutableRefObject,
 } from "react";
+
 import * as Tone from "tone";
+
+import { unmute } from "../unmute";
 
 // Custom hook to manage Tone.js player instance
 export const useTonePlayer = (
@@ -18,7 +21,6 @@ export const useTonePlayer = (
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-
   // Initialize player once
   useEffect(() => {
     // Clean up previous player if it exists
@@ -36,8 +38,13 @@ export const useTonePlayer = (
       // Only create new player if we don't have one or URL changed
       if (!playerRef.current) {
         playerRef.current = new Tone.Player({
-          url: audioUrl,
-          onload: () => setIsLoaded(true),
+          autostart: false,
+          loop: true,
+          playbackRate: 1.5,
+          fadeIn: 0.5,
+          fadeOut: 0.5,
+          volume: -6, // in decibels
+          mute: false,
         }).toDestination();
 
         reverbRef.current = new Tone.Reverb({
@@ -45,12 +52,16 @@ export const useTonePlayer = (
           wet: reverbWetness,
           preDelay: 0.1,
         }).toDestination();
-
-        playerRef.current.connect(reverbRef.current);
       } else {
         // If player exists, just load new URL
+        setIsPlaying(false);
         setIsLoaded(false);
-        await playerRef.current.load(audioUrl);
+        if (audioUrl != "") {
+          playerRef.current.stop();
+          playerRef.current.load(audioUrl);
+          playerRef.current.connect(reverbRef.current!);
+          unmute(playerRef.current!.context.rawContext, true, false);
+        }
         setIsLoaded(true);
       }
     };
@@ -60,11 +71,9 @@ export const useTonePlayer = (
 
   // Play control
   const togglePlay = useCallback(async () => {
-    if (!playerRef.current || !isLoaded) return;
+    if (!playerRef.current || !reverbRef.current) return;
 
     // Ensure audio context is started (needed due to browser autoplay policies)
-    await Tone.start();
-
     if (!isPlaying) {
       playerRef.current.start();
       setIsPlaying(true);
