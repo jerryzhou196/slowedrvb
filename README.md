@@ -9,7 +9,8 @@ TODO:
   - refactor to rely on local file system instead of S3
   - automate youtube to mp3
 - add admin page with access to computer for url mp3 conversion
-- build
+- build custom virtualized file system on website to remotely manage computer
+- optimize music with rust webasm 
 
 
 
