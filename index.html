@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>slow playback audio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* monkeytype "serika dark" palette */
+      --bg: #323437;
+      --main: #e2b714;
+      --sub: #646669;
+      --sub-alt: #2c2e31;
+      --text: #d1d0c5;
+      --error: #ca4754;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Roboto Mono', ui-monospace, 'JetBrains Mono', Menlo, monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-variant-ligatures: none;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--main);
+      letter-spacing: -0.01em;
+    }
+
+    h1::before {
+      content: '> ';
+      color: var(--sub);
+    }
+
+    .subtitle {
+      font-size: 0.8125rem;
+      color: var(--sub);
+      margin: 6px 0 28px;
+      line-height: 1.6;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    button {
+      flex: 1;
+      padding: 11px 14px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--sub);
+      background: var(--sub-alt);
+      cursor: pointer;
+      transition: color 0.12s, background 0.12s, transform 0.1s;
+    }
+
+    button:hover {
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-start:hover {
+      background: var(--main);
+      color: var(--bg);
+    }
+
+    .btn-clear:hover {
+      background: var(--error);
+      color: var(--bg);
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toggle-row .label {
+      font-size: 0.75rem;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .toggle-row .label small {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.625rem;
+      color: var(--sub);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    button.toggle {
+      flex: 0 0 60px;
+      padding: 8px 0;
+    }
+
+    button.toggle.active,
+    button.toggle.active:hover {
+      background: var(--main);
+      color: var(--bg);
+    }
+
+    .eightd-speed {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--bg);
+    }
+
+    .slider-section.disabled {
+      opacity: 0.4;
+    }
+
+    .slider-section.disabled input[type="range"] {
+      pointer-events: none;
+    }
+
+    .slider-section {
+      background: var(--sub-alt);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-top: 12px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+
+    .slider-label > span {
+      font-size: 0.75rem;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .slider-label .rate-value {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--main);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rate-suffix {
+      font-size: 0.75rem;
+      color: var(--sub);
+      font-weight: 400;
+    }
+
+    .slider-wrap {
+      position: relative;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--bg);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--main);
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--main);
+      cursor: pointer;
+      border: none;
+    }
+
+    /* dim, locked-out portion of the speed slider when the buffer can't sustain it */
+    .slider-lock {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      height: 6px;
+      transform: translateY(-50%);
+      border-radius: 0 3px 3px 0;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(202, 71, 84, 0.35) 0 4px,
+        rgba(202, 71, 84, 0.12) 4px 8px
+      );
+      pointer-events: none;
+      transition: left 0.15s ease;
+    }
+
+    .ticks {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding: 0 2px;
+    }
+
+    .ticks span {
+      font-size: 0.6875rem;
+      color: var(--sub);
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      font-size: 0.6875rem;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .meta b {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .meta .locked {
+      color: var(--error);
+    }
+
+    .buffer-viz {
+      background: var(--sub-alt);
+      border-radius: 10px;
+      padding: 16px 20px 18px;
+      margin-top: 12px;
+    }
+
+    .buffer-viz-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.6875rem;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .dot-read { background: var(--main); }
+    .dot-write { background: var(--error); }
+
+    #buffer-canvas {
+      display: block;
+      width: 100%;
+      height: 90px;
+      border-radius: 6px;
+      background: var(--bg);
+    }
+
+    .status {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--sub);
+      min-height: 1.2em;
+    }
+
+    .status.recording { color: var(--main); }
+    .status.streaming { color: var(--main); }
+    .status.error { color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>slow playback audio</h1>
+    <p class="subtitle">stream audio from a browser tab, slow it down, and drench it in reverb &mdash; in real time.</p>
+
+    <div class="controls">
+      <button class="btn-start" id="btn-record" onclick="start_audio()">start</button>
+      <button class="btn-clear" id="btn-clear" onclick="clear_buffer()" disabled>clear buffer</button>
+      <button class="btn-stop" id="btn-stop" onclick="stop_audio()">stop</button>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span>playback rate</span>
+        <span class="rate-value"><span id="playback-rate-value">0.80</span><span class="rate-suffix">&times;</span></span>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="playback-rate-control" min="0.25" max="2" step="0.05" value="0.80">
+        <div class="slider-lock" id="rate-lock" style="left: 100%;"></div>
+      </div>
+      <div class="ticks">
+        <span>0.25&times;</span>
+        <span>1.0&times;</span>
+        <span>2.0&times;</span>
+      </div>
+      <div class="meta">
+        <span>buffered <b id="buffered-readout">0.0s</b></span>
+        <span>max speed <b id="maxrate-readout">1.00&times;</b></span>
+      </div>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span>reverb mix</span>
+        <span class="rate-value"><span id="reverb-mix-value">40</span><span class="rate-suffix">%</span></span>
+      </div>
+      <input type="range" id="reverb-mix-control" min="0" max="100" step="1" value="40">
+      <div class="ticks">
+        <span>dry</span>
+        <span>50%</span>
+        <span>wet</span>
+      </div>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span>reverb decay</span>
+        <span class="rate-value"><span id="reverb-decay-value">3.0</span><span class="rate-suffix">s</span></span>
+      </div>
+      <input type="range" id="reverb-decay-control" min="0.5" max="8" step="0.5" value="3.0">
+      <div class="ticks">
+        <span>0.5s</span>
+        <span>4s</span>
+        <span>8s</span>
+      </div>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-label">
+        <span>bass boost</span>
+        <span class="rate-value">+<span id="bass-boost-value">0.0</span><span class="rate-suffix">dB</span></span>
+      </div>
+      <input type="range" id="bass-boost-control" min="0" max="15" step="0.5" value="0">
+      <div class="ticks">
+        <span>flat</span>
+        <span>+7.5dB</span>
+        <span>+15dB</span>
+      </div>
+    </div>
+
+    <div class="slider-section" id="pan-section">
+      <div class="slider-label">
+        <span>3d pan</span>
+        <span class="rate-value"><span id="pan-value">C</span></span>
+      </div>
+      <input type="range" id="pan-control" min="-100" max="100" step="1" value="0">
+      <div class="ticks">
+        <span>left</span>
+        <span>center</span>
+        <span>right</span>
+      </div>
+    </div>
+
+    <div class="slider-section">
+      <div class="toggle-row">
+        <span class="label">8d audio<small>auto-sweep left &harr; right</small></span>
+        <button class="toggle" id="btn-8d" onclick="toggle_8d()" aria-pressed="false">off</button>
+      </div>
+      <div class="eightd-speed" id="eightd-speed" hidden>
+        <div class="slider-label">
+          <span>orbit speed</span>
+          <span class="rate-value"><span id="eightd-period-value">8.0</span><span class="rate-suffix">s</span></span>
+        </div>
+        <input type="range" id="eightd-period-control" min="2" max="20" step="0.5" value="8">
+        <div class="ticks">
+          <span>2s fast</span>
+          <span>8s</span>
+          <span>20s slow</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="buffer-viz">
+      <div class="buffer-viz-label">
+        <span>buffer &mdash; last 60s</span>
+        <span class="legend">
+          <span><i class="dot dot-read"></i>playback head</span>
+          <span><i class="dot dot-write"></i>live</span>
+        </span>
+      </div>
+      <canvas id="buffer-canvas" width="480" height="90"></canvas>
+    </div>
+
+    <div class="status" id="status">tip: pick a chrome tab and enable &ldquo;share tab audio&rdquo; in the picker.</div>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
