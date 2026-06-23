@@ -1,43 +1,42 @@
-// ---- monkeytype palette (for canvas drawing) ----
-var COLOR_BG = '#323437';
-var COLOR_MAIN = '#e2b714';
+// ---- palette (for canvas drawing) ----
 var COLOR_SUB = '#646669';
-var COLOR_TEXT = '#d1d0c5';
+var COLOR_MAIN = '#e2b714';
 var COLOR_ERROR = '#ca4754';
 
-// ---- audio graph ----
+// ---- shared audio graph ----
 var audioContext;
-var streamSource, scriptNode;
 var bassFilter, convolverNode, dryGain, wetGain, outputBus, pannerNode;
 
-// ---- circular buffer ----
-var circularBuffer;
-var bufferLength = 0;
-var writePos = 0;   // total samples ever written (monotonic)
-var readPos = 0;    // fractional read head (monotonic), always <= writePos
-var isStreaming = false;
+// ---- file mode (default) ----
+var audioEl, mediaSource, filePeaks = null, peaksMax = 0.0001, peaksLive = false;
+var analyser, analyserBuf, placeholderPeaks = null;
+var sourceBuffer = null, isMp3 = false;   // decoded buffer + flag, for mp3 export
+var WAVE_N = 1200;
 
-// How much backlog (in seconds) you must build up to unlock the full 2.0x.
-var FULL_SPEED_HEADROOM = 6;
-// Visualization window.
+// ---- streaming mode ----
+var streamSource, scriptNode, currentAudioTrack;
+var circularBuffer, bufferLength = 0, writePos = 0, readPos = 0, isStreaming = false;
+
+// ---- app mode ----
+var appMode = 'file';            // 'file' | 'stream'
+
+// ---- visualization ----
 var VIZ_SECONDS = 60;
-
-// The largest playback rate the current buffer can sustain. Updated every frame.
-var allowedMaxRate = 1.0;
 var vizRafId = null;
 
 // ---- 8D auto-pan ----
-// Driven by an audio-thread oscillator (not requestAnimationFrame), so the
-// sweep keeps running smoothly even while this tab is in the background.
 var eightDEnabled = false;
 var lfoOsc = null, lfoGain = null;
+
+// ---- name shown under the disc ----
+var fileName = '', tabName = '';
+
+var ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+var ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
 
 // ---- elements ----
 var playbackControl = document.querySelector('#playback-rate-control');
 var playbackValue = document.querySelector('#playback-rate-value');
-var rateLock = document.querySelector('#rate-lock');
-var bufferedReadout = document.querySelector('#buffered-readout');
-var maxRateReadout = document.querySelector('#maxrate-readout');
 var reverbMixControl = document.querySelector('#reverb-mix-control');
 var reverbMixValue = document.querySelector('#reverb-mix-value');
 var reverbDecayControl = document.querySelector('#reverb-decay-control');
@@ -52,14 +51,51 @@ var eightdSpeed = document.querySelector('#eightd-speed');
 var eightdPeriodControl = document.querySelector('#eightd-period-control');
 var eightdPeriodValue = document.querySelector('#eightd-period-value');
 var statusEl = document.querySelector('#status');
-var clearBtn = document.querySelector('#btn-clear');
 var bufferCanvas = document.querySelector('#buffer-canvas');
 var bufferCtx = bufferCanvas ? bufferCanvas.getContext('2d') : null;
+var fileInput = document.querySelector('#file-input');
+var disc = document.querySelector('#disc');
+var trackNameEl = document.querySelector('#track-name');
+var playBtn = document.querySelector('#btn-play');
+var btnAdvanced = document.querySelector('#btn-advanced');
+var advanced = document.querySelector('#advanced');
+var exportBtn = document.querySelector('#btn-export');
+var refreshBtn = document.querySelector('#btn-refresh');
 
 function setStatus(text, className) {
   if (!statusEl) return;
   statusEl.textContent = text;
   statusEl.className = 'status' + (className ? ' ' + className : '');
+}
+
+function currentRate() {
+  return playbackControl ? parseFloat(playbackControl.value) : 1.0;
+}
+
+function showTrackName() {
+  if (trackNameEl) trackNameEl.textContent = (appMode === 'stream') ? tabName : fileName;
+}
+
+// ---- vinyl spin: rotation speed proportional to playback rate ----
+function setSpin(on) {
+  if (disc) disc.classList.toggle('spinning', on);
+}
+
+function updateSpinDuration() {
+  document.documentElement.style.setProperty('--rotation-duration', (1 / Math.max(0.05, currentRate())) + 's');
+}
+
+function isPlaying() {
+  return (appMode === 'stream') ? isStreaming : !!(audioEl && !audioEl.paused);
+}
+
+function updatePlayIcon() {
+  if (playBtn) playBtn.innerHTML = isPlaying() ? ICON_PAUSE : ICON_PLAY;
+}
+
+function showPlayButton() {
+  var has = (appMode === 'stream') ? !!currentAudioTrack : !!(audioEl && audioEl.src);
+  if (playBtn) playBtn.disabled = !has;
 }
 
 // ---- reverb impulse response ----
@@ -76,10 +112,32 @@ function generateImpulseResponse(ctx, duration, decay) {
   return impulse;
 }
 
+// Debounced: regenerating a multi-second impulse on every slider tick starves the
+// audio thread (the crackle), and swapping the convolver buffer cuts the live reverb
+// tail (the click). Wait for the drag to settle, then duck the wet path across the swap.
+var decayTimer = null;
+function scheduleImpulse() {
+  clearTimeout(decayTimer);
+  decayTimer = setTimeout(rebuildImpulse, 150);
+}
+
 function rebuildImpulse() {
   if (!audioContext || !convolverNode) return;
   var decay = reverbDecayControl ? parseFloat(reverbDecayControl.value) : 3.0;
-  convolverNode.buffer = generateImpulseResponse(audioContext, decay, 2.5);
+  var newBuf = generateImpulseResponse(audioContext, decay, 2.5);
+  if (!wetGain) { convolverNode.buffer = newBuf; return; }
+  var mix = (reverbMixControl ? parseInt(reverbMixControl.value, 10) : 0) / 100;
+  var now = audioContext.currentTime;
+  wetGain.gain.cancelScheduledValues(now);
+  wetGain.gain.setValueAtTime(wetGain.gain.value, now);
+  wetGain.gain.linearRampToValueAtTime(0, now + 0.02);
+  setTimeout(function () {
+    convolverNode.buffer = newBuf;
+    var t = audioContext.currentTime;
+    wetGain.gain.cancelScheduledValues(t);
+    wetGain.gain.setValueAtTime(0, t);
+    wetGain.gain.linearRampToValueAtTime(mix, t + 0.02);
+  }, 25);
 }
 
 // ---- effect setters ----
@@ -92,10 +150,9 @@ function applyBass(db) {
   if (bassFilter) bassFilter.gain.value = db;
 }
 
-// pan in [-1, 1]; uses HRTF spatialization so it actually sounds 3D on headphones.
 function applyPan(pan) {
   if (!pannerNode) return;
-  var az = pan * 80 * Math.PI / 180; // +/- 80 degrees around the head
+  var az = pan * 80 * Math.PI / 180;
   var x = Math.sin(az);
   var z = -Math.cos(az);
   if (pannerNode.positionX) {
@@ -112,8 +169,15 @@ function formatPan(p) {
   return (p < 0 ? 'L ' : 'R ') + Math.abs(p);
 }
 
-// Sweep positionX between -1 and +1 with a sine LFO, keeping the source a touch
-// in front (z = -0.3) so it arcs ear-to-ear without passing through the head.
+// HRTF panner colors the sound even at center, so only route through it when used.
+function routeOutput() {
+  if (!outputBus || !audioContext) return;
+  var spatial = eightDEnabled || (panControl && parseInt(panControl.value, 10) !== 0);
+  outputBus.disconnect();
+  outputBus.connect(spatial ? pannerNode : audioContext.destination);
+}
+
+// ---- 8D sweep ----
 function start8D() {
   if (!audioContext || !pannerNode || !pannerNode.positionX) return;
   stop8D();
@@ -122,7 +186,7 @@ function start8D() {
   lfoOsc.type = 'sine';
   lfoOsc.frequency.value = 1 / period;
   lfoGain = audioContext.createGain();
-  lfoGain.gain.value = 1.0; // sweep amplitude on the X axis
+  lfoGain.gain.value = 1.0;
   pannerNode.positionX.value = 0;
   pannerNode.positionY.value = 0;
   pannerNode.positionZ.value = -0.3;
@@ -133,7 +197,7 @@ function start8D() {
 
 function stop8D() {
   if (lfoOsc) {
-    try { lfoOsc.stop(); } catch (e) { /* already stopped */ }
+    try { lfoOsc.stop(); } catch (e) {}
     lfoOsc.disconnect();
     lfoOsc = null;
   }
@@ -163,17 +227,172 @@ window.toggle_8d = function () {
   eightDEnabled = !eightDEnabled;
   updateEightDUI();
   if (eightDEnabled) {
-    if (isStreaming) start8D();
+    if (audioContext) start8D();
   } else {
     stop8D();
     applyPan(panControl ? parseInt(panControl.value, 10) / 100 : 0);
   }
+  routeOutput();
 };
 
-// ---- start ----
-window.start_audio = async function () {
+window.toggle_advanced = function () {
+  if (!advanced) return;
+  var open = advanced.hidden;
+  advanced.hidden = !open;
+  if (btnAdvanced) {
+    btnAdvanced.textContent = open ? 'hide advanced ▴' : 'show advanced ▾';
+    btnAdvanced.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+};
+
+// ---- build the shared effect chain once ----
+function ensureAudio() {
+  if (audioContext) return;
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+  bassFilter = audioContext.createBiquadFilter();
+  bassFilter.type = 'lowshelf';
+  bassFilter.frequency.value = 160;
+
+  convolverNode = audioContext.createConvolver();
+  dryGain = audioContext.createGain();
+  wetGain = audioContext.createGain();
+  outputBus = audioContext.createGain();
+
+  pannerNode = audioContext.createPanner();
+  pannerNode.panningModel = 'HRTF';
+  pannerNode.distanceModel = 'inverse';
+  pannerNode.refDistance = 1;
+  pannerNode.rolloffFactor = 0;
+
+  bassFilter.connect(dryGain);
+  dryGain.connect(outputBus);
+  bassFilter.connect(convolverNode);
+  convolverNode.connect(wetGain);
+  wetGain.connect(outputBus);
+  pannerNode.connect(audioContext.destination);
+
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 1024;
+  analyserBuf = new Float32Array(analyser.fftSize);
+  bassFilter.connect(analyser);   // taps audio to draw a live waveform when decode fails
+
+  rebuildImpulse();
+  applyReverbMix((reverbMixControl ? parseInt(reverbMixControl.value, 10) : 0) / 100);
+  applyBass(bassControl ? parseFloat(bassControl.value) : 0);
+  applyPan(panControl ? parseInt(panControl.value, 10) / 100 : 0);
+  routeOutput();
+  if (eightDEnabled) start8D();
+}
+
+// ============================ FILE MODE ============================
+
+function load_file(file) {
+  ensureAudio();
+  if (appMode === 'stream') stopStreamFully();
+  appMode = 'file';
+
+  if (!audioEl) {
+    audioEl = new Audio();
+    audioEl.preservesPitch = false;            // slowing should drop pitch, like a record
+    audioEl.mozPreservesPitch = false;
+    audioEl.webkitPreservesPitch = false;
+    audioEl.addEventListener('play', function () { setSpin(true); updatePlayIcon(); });
+    audioEl.addEventListener('pause', function () { setSpin(false); updatePlayIcon(); });
+    audioEl.addEventListener('ended', function () { setSpin(false); updatePlayIcon(); });
+  }
+  if (!mediaSource) {
+    mediaSource = audioContext.createMediaElementSource(audioEl);  // once per element
+  }
+  mediaSource.disconnect();
+  mediaSource.connect(bassFilter);
+
+  audioEl.src = URL.createObjectURL(file);
+  audioEl.playbackRate = currentRate();
+  fileName = file.name || '';
+  isMp3 = /audio\/(mpeg|mp3)/i.test(file.type) || /\.mp3$/i.test(fileName);
+  decodeFile(file);
+
+  showTrackName();
+  showPlayButton();
+  updatePlayIcon();
+  updateRefreshUI();
+  updateSpinDuration();
+  startViz();
+  setStatus('loaded — hit play.', '');
+}
+
+// Decode the whole file once: drives the full static waveform and the mp3 export.
+// If the decoder rejects it, fall back to filling the waveform live as it plays.
+async function decodeFile(file) {
+  filePeaks = new Float32Array(WAVE_N);   // start empty
+  peaksMax = 0.0001;
+  peaksLive = true;
+  sourceBuffer = null;
+  updateExportUI();
   try {
-    var displayStream = await navigator.mediaDevices.getDisplayMedia({
+    var audioBuf = await audioContext.decodeAudioData(await file.arrayBuffer());
+    sourceBuffer = audioBuf;
+    var ch = audioBuf.getChannelData(0);
+    var block = Math.floor(ch.length / WAVE_N) || 1;
+    for (var i = 0; i < WAVE_N; i++) {
+      var start = i * block, end = Math.min(ch.length, start + block), mx = 0;
+      for (var j = start; j < end; j++) { var a = Math.abs(ch[j]); if (a > mx) mx = a; }
+      filePeaks[i] = mx;
+      if (mx > peaksMax) peaksMax = mx;
+    }
+    peaksLive = false;   // got the whole thing up front
+  } catch (e) {
+    peaksLive = true;    // decoder refused it — fill in live while it plays
+  }
+  updateExportUI();
+}
+
+window.choose_file = function () { if (fileInput) fileInput.click(); };
+
+if (fileInput) {
+  fileInput.addEventListener('change', function () {
+    var f = fileInput.files && fileInput.files[0];
+    if (f) load_file(f);
+  });
+}
+
+// unified play/pause for both modes
+window.toggle_play = function () {
+  if (appMode === 'stream') {
+    if (!currentAudioTrack || currentAudioTrack.readyState !== 'live') {
+      setStatus('press "stream (tab)" to capture a tab first.', '');
+      return;
+    }
+    if (isStreaming) pauseStream(); else resumeStream();
+  } else {
+    if (!audioEl || !audioEl.src) { setStatus('choose a file first.', ''); return; }
+    if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+    if (audioEl.paused) audioEl.play(); else audioEl.pause();
+  }
+};
+
+// drag a file straight onto the disc
+if (disc) {
+  disc.addEventListener('dragover', function (e) { e.preventDefault(); disc.classList.add('dragover'); });
+  disc.addEventListener('dragleave', function () { disc.classList.remove('dragover'); });
+  disc.addEventListener('drop', function (e) {
+    e.preventDefault();
+    disc.classList.remove('dragover');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) load_file(f);
+  });
+}
+
+// ============================ STREAMING MODE ============================
+
+window.stream_tab = async function () {
+  ensureAudio();
+  if (audioContext.state === 'suspended') await audioContext.resume();
+
+  var displayStream;
+  try {
+    displayStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
       audio: {
         echoCancellation: false,
@@ -182,209 +401,291 @@ window.start_audio = async function () {
         suppressLocalAudioPlayback: true,
       },
     });
-
-    var audioTracks = displayStream.getAudioTracks();
-    if (!audioTracks.length) {
-      displayStream.getTracks().forEach(function (t) { t.stop(); });
-      throw new Error("No audio track. In the picker, choose a Chrome Tab and enable 'Share tab audio'.");
-    }
-    var audioOnlyStream = new MediaStream(audioTracks);
-    displayStream.getVideoTracks().forEach(function (t) { t.stop(); });
-
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Circular buffer: ~5 minutes of headroom for slow playback.
-    bufferLength = audioContext.sampleRate * 300;
-    circularBuffer = new Float32Array(bufferLength);
-    writePos = 0;
-    readPos = 0;
-    isStreaming = true;
-
-    streamSource = audioContext.createMediaStreamSource(audioOnlyStream);
-    scriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-
-    scriptNode.onaudioprocess = function (e) {
-      var input = e.inputBuffer.getChannelData(0);
-      var output = e.outputBuffer.getChannelData(0);
-      var n = output.length;
-
-      if (!isStreaming) {
-        for (var k = 0; k < n; k++) output[k] = 0;
-        return;
-      }
-
-      // Write incoming tab audio into the circular buffer.
-      for (var i = 0; i < input.length; i++) {
-        circularBuffer[writePos % bufferLength] = input[i];
-        writePos++;
-      }
-
-      // If write has lapped read by more than the buffer, drop the oldest audio.
-      if (writePos - readPos > bufferLength - 1) {
-        readPos = writePos - bufferLength + 1;
-      }
-
-      // Read from the circular buffer at the (clamped) playback rate.
-      var rate = playbackControl ? parseFloat(playbackControl.value) : 1.0;
-      if (rate > allowedMaxRate) rate = allowedMaxRate;
-      for (var j = 0; j < n; j++) {
-        if (readPos >= writePos - 1) {
-          output[j] = 0; // caught up to live — nothing buffered ahead
-          continue;
-        }
-        var idx = Math.floor(readPos);
-        var frac = readPos - idx;
-        var s0 = circularBuffer[idx % bufferLength];
-        var s1 = circularBuffer[(idx + 1) % bufferLength];
-        output[j] = s0 * (1 - frac) + s1 * frac;
-        readPos += rate;
-      }
-    };
-
-    // Effect chain:
-    //   scriptNode -> bassFilter -> dryGain ------------------> outputBus -> panner -> destination
-    //                              `-> convolver -> wetGain ->'
-    bassFilter = audioContext.createBiquadFilter();
-    bassFilter.type = 'lowshelf';
-    bassFilter.frequency.value = 160;
-
-    convolverNode = audioContext.createConvolver();
-    rebuildImpulse();
-
-    dryGain = audioContext.createGain();
-    wetGain = audioContext.createGain();
-    outputBus = audioContext.createGain();
-
-    pannerNode = audioContext.createPanner();
-    pannerNode.panningModel = 'HRTF';
-    pannerNode.distanceModel = 'inverse';
-    pannerNode.refDistance = 1;
-    pannerNode.rolloffFactor = 0; // distance shouldn't change loudness, only direction
-
-    streamSource.connect(scriptNode);
-    scriptNode.connect(bassFilter);
-
-    bassFilter.connect(dryGain);
-    dryGain.connect(outputBus);
-
-    bassFilter.connect(convolverNode);
-    convolverNode.connect(wetGain);
-    wetGain.connect(outputBus);
-
-    outputBus.connect(pannerNode);
-    pannerNode.connect(audioContext.destination);
-
-    // Apply current slider positions.
-    applyReverbMix((reverbMixControl ? parseInt(reverbMixControl.value, 10) : 40) / 100);
-    applyBass(bassControl ? parseFloat(bassControl.value) : 0);
-    if (eightDEnabled) {
-      start8D();
-    } else {
-      applyPan(panControl ? parseInt(panControl.value, 10) / 100 : 0);
-    }
-
-    if (clearBtn) clearBtn.disabled = false;
-    setStatus('streaming — slow down to build a buffer, then speed up to catch up.', 'streaming');
-
-    audioTracks[0].addEventListener('ended', function () {
-      isStreaming = false;
-      setStatus('tab share ended.', '');
-    });
-
-    startViz();
   } catch (e) {
     setStatus(e.name + ': ' + e.message, 'error');
-  }
-};
-
-// ---- clear buffer: jump the playback head to live, discarding stale backlog ----
-window.clear_buffer = function () {
-  if (!circularBuffer || !isStreaming) {
-    setStatus('nothing to clear — start streaming first.', '');
     return;
   }
-  readPos = writePos;       // catch up to the live edge
-  circularBuffer.fill(0);   // wipe the stored audio so the reverb of the old song dies out
-  setStatus('buffer cleared — caught up to live audio.', 'streaming');
+
+  var audioTracks = displayStream.getAudioTracks();
+  if (!audioTracks.length) {
+    displayStream.getTracks().forEach(function (t) { t.stop(); });
+    setStatus("no audio track — choose a Chrome Tab and enable 'Share tab audio'.", 'error');
+    return;
+  }
+
+  // commit: leave file mode, drop any previous capture, start the new one
+  if (audioEl) audioEl.pause();
+  if (mediaSource) mediaSource.disconnect();
+  stopStreamFully();
+  appMode = 'stream';
+  startCapture(displayStream, audioTracks);
+  updateModeUI();
 };
 
-// ---- stop ----
-window.stop_audio = function () {
+function startCapture(displayStream, audioTracks) {
+  // grab the tab's name before dropping the video track (audio labels are often blank)
+  var videoTrack = displayStream.getVideoTracks()[0];
+  var rawLabel = (videoTrack && videoTrack.label) || (audioTracks[0] && audioTracks[0].label) || '';
+  tabName = (rawLabel && rawLabel.indexOf('://') === -1) ? rawLabel : 'live tab audio';
+
+  var audioOnlyStream = new MediaStream(audioTracks);
+  displayStream.getVideoTracks().forEach(function (t) { t.stop(); });
+  currentAudioTrack = audioTracks[0];
+
+  bufferLength = audioContext.sampleRate * 300;   // ~5 min headroom
+  circularBuffer = new Float32Array(bufferLength);
+  writePos = 0;
+  readPos = 0;
+  isStreaming = true;
+
+  streamSource = audioContext.createMediaStreamSource(audioOnlyStream);
+  scriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+  scriptNode.onaudioprocess = streamProcess;
+  streamSource.connect(scriptNode);
+  scriptNode.connect(bassFilter);
+  if (outputBus) outputBus.gain.value = 1;
+  if (eightDEnabled) start8D();
+
+  setSpin(true);
+  setStatus('streaming — drag the slider to slow it down.', 'streaming');
+
+  currentAudioTrack.addEventListener('ended', function () {
+    stopStreamFully();
+    updateModeUI();
+    setStatus('tab share ended — press "stream (tab)" to pick again.', '');
+  });
+
+  startViz();
+}
+
+function streamProcess(e) {
+  var input = e.inputBuffer.getChannelData(0);
+  var output = e.outputBuffer.getChannelData(0);
+  var n = output.length;
+
+  if (!isStreaming) {
+    for (var k = 0; k < n; k++) output[k] = 0;
+    return;
+  }
+
+  for (var i = 0; i < input.length; i++) {
+    circularBuffer[writePos % bufferLength] = input[i];
+    writePos++;
+  }
+  if (writePos - readPos > bufferLength - 1) {
+    readPos = writePos - bufferLength + 1;
+  }
+
+  var rate = currentRate();
+  for (var j = 0; j < n; j++) {
+    if (readPos >= writePos - 1) { output[j] = 0; continue; }
+    var idx = Math.floor(readPos);
+    var frac = readPos - idx;
+    var s0 = circularBuffer[idx % bufferLength];
+    var s1 = circularBuffer[(idx + 1) % bufferLength];
+    output[j] = s0 * (1 - frac) + s1 * frac;
+    readPos += rate;
+  }
+}
+
+// pause = mute (and stop buffering)
+function pauseStream() {
+  isStreaming = false;
+  if (outputBus) outputBus.gain.value = 0;
+  stop8D();
+  setSpin(false);
+  updatePlayIcon();
+  setStatus('muted — press play to unmute and catch up to live.', '');
+}
+
+// play = unmute + clear the buffer (jump to live)
+function resumeStream() {
+  if (audioContext.state === 'suspended') audioContext.resume();
+  if (circularBuffer) { readPos = writePos; circularBuffer.fill(0); }
+  if (outputBus) outputBus.gain.value = 1;
+  isStreaming = true;
+  if (eightDEnabled) start8D();
+  setSpin(true);
+  updatePlayIcon();
+  startViz();
+  setStatus('streaming — drag the slider to slow it down.', 'streaming');
+}
+
+// fully release the capture (tab ended, or a new capture/file replaces it)
+function stopStreamFully() {
   isStreaming = false;
   stop8D();
-  if (scriptNode) scriptNode.disconnect();
-  if (streamSource) streamSource.disconnect();
-  if (bassFilter) bassFilter.disconnect();
-  if (convolverNode) convolverNode.disconnect();
-  if (dryGain) dryGain.disconnect();
-  if (wetGain) wetGain.disconnect();
-  if (outputBus) outputBus.disconnect();
-  if (pannerNode) pannerNode.disconnect();
-  stopViz();
-  if (clearBtn) clearBtn.disabled = true;
-  allowedMaxRate = 1.0;
-  if (bufferedReadout) bufferedReadout.textContent = '0.0s';
-  setStatus('stopped.', '');
+  if (scriptNode) { scriptNode.disconnect(); scriptNode.onaudioprocess = null; scriptNode = null; }
+  if (streamSource) { streamSource.disconnect(); streamSource = null; }
+  if (currentAudioTrack) { try { currentAudioTrack.stop(); } catch (e) {} currentAudioTrack = null; }
+  if (outputBus) outputBus.gain.value = 1;
+  tabName = '';
+  setSpin(false);
+}
+
+// ============================ MODE UI ============================
+
+function updateModeUI() {
+  showTrackName();
+  showPlayButton();
+  updatePlayIcon();
+  updateExportUI();
+  updateRefreshUI();
+}
+
+// refresh = drop the buffered backlog and snap the read head to the live edge
+function updateRefreshUI() {
+  if (refreshBtn) refreshBtn.hidden = !(appMode === 'stream' && currentAudioTrack);
+}
+
+window.refresh_stream = function () {
+  if (appMode !== 'stream' || !circularBuffer) return;
+  readPos = writePos;
+  circularBuffer.fill(0);
+  setStatus('jumped to live.', 'streaming');
 };
 
-// ---- visualization + dynamic speed cap ----
+// ============================ MP3 EXPORT ============================
+// Only offered for uploaded mp3 files. Re-renders the decoded buffer through
+// the same effect chain offline, then encodes with lamejs.
+// ponytail: renders + encodes on the main thread; move to a Worker if big files jank the UI.
+
+function updateExportUI() {
+  if (exportBtn) exportBtn.hidden = !(appMode === 'file' && isMp3 && sourceBuffer);
+}
+
+window.export_mp3 = async function () {
+  if (appMode !== 'file' || !sourceBuffer) { setStatus('load an mp3 first.', 'error'); return; }
+  if (!window.lamejs) { setStatus('mp3 encoder still loading — try again in a moment.', 'error'); return; }
+  if (exportBtn) exportBtn.disabled = true;
+  setStatus('rendering export…', '');
+  try {
+    var rendered = await renderProcessed();   // captures the current speed/effects snapshot
+    var blob = await encodeMp3(rendered, function (pct) {
+      setStatus('encoding export… ' + pct + '%', '');
+    });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (fileName.replace(/\.[^.]+$/, '') || 'export') + ' (slowed).mp3';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    setStatus('exported ' + a.download, '');
+  } catch (e) {
+    setStatus('export failed: ' + (e && e.message || e), 'error');
+  }
+  if (exportBtn) exportBtn.disabled = false;
+};
+
+// mirror the live graph (rate → bass → dry/wet reverb → pan/8D) in an OfflineAudioContext
+function renderProcessed() {
+  var rate = currentRate();
+  var sr = sourceBuffer.sampleRate;
+  var off = new OfflineAudioContext(2, Math.max(1, Math.ceil(sourceBuffer.length / rate)), sr);
+
+  var src = off.createBufferSource();
+  src.buffer = sourceBuffer;
+  src.playbackRate.value = rate;   // resample → pitch drops with speed, like the live player
+
+  var bass = off.createBiquadFilter();
+  bass.type = 'lowshelf';
+  bass.frequency.value = 160;
+  bass.gain.value = bassControl ? parseFloat(bassControl.value) : 0;
+
+  var conv = off.createConvolver();
+  conv.buffer = generateImpulseResponse(off, reverbDecayControl ? parseFloat(reverbDecayControl.value) : 3, 2.5);
+  var dry = off.createGain(), wet = off.createGain(), bus = off.createGain();
+  var mix = (reverbMixControl ? parseInt(reverbMixControl.value, 10) : 0) / 100;
+  dry.gain.value = 1 - mix;
+  wet.gain.value = mix;
+
+  src.connect(bass);
+  bass.connect(dry); dry.connect(bus);
+  bass.connect(conv); conv.connect(wet); wet.connect(bus);
+
+  var panPos = panControl ? parseInt(panControl.value, 10) : 0;
+  if (eightDEnabled || panPos !== 0) {
+    var pan = off.createPanner();
+    pan.panningModel = 'HRTF';
+    pan.distanceModel = 'inverse';
+    pan.refDistance = 1;
+    pan.rolloffFactor = 0;
+    bus.connect(pan);
+    pan.connect(off.destination);
+    if (eightDEnabled && pan.positionX) {
+      var period = eightdPeriodControl ? parseFloat(eightdPeriodControl.value) : 8;
+      var lfo = off.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 1 / period;
+      var lg = off.createGain();
+      pan.positionY.value = 0;
+      pan.positionZ.value = -0.3;
+      lfo.connect(lg);
+      lg.connect(pan.positionX);
+      lfo.start();
+    } else {
+      var az = (panPos / 100) * 80 * Math.PI / 180;
+      if (pan.positionX) {
+        pan.positionX.value = Math.sin(az);
+        pan.positionY.value = 0;
+        pan.positionZ.value = -Math.cos(az);
+      } else if (pan.setPosition) {
+        pan.setPosition(Math.sin(az), 0, -Math.cos(az));
+      }
+    }
+  } else {
+    bus.connect(off.destination);
+  }
+
+  src.start();
+  return off.startRendering();
+}
+
+// chunked + awaited so the encode loop yields to the event loop, keeping the
+// sliders/play responsive and letting us report progress.
+async function encodeMp3(buf, onProgress) {
+  var channels = Math.min(2, buf.numberOfChannels);
+  var enc = new window.lamejs.Mp3Encoder(channels, buf.sampleRate, 192);
+  var left = floatTo16(buf.getChannelData(0));
+  var right = channels > 1 ? floatTo16(buf.getChannelData(1)) : left;
+  var block = 1152, chunks = [], n = 0;
+  for (var i = 0; i < left.length; i += block) {
+    var l = left.subarray(i, i + block);
+    var part = channels > 1 ? enc.encodeBuffer(l, right.subarray(i, i + block)) : enc.encodeBuffer(l);
+    if (part.length) chunks.push(part);
+    if (++n % 100 === 0) {                       // ~2.6s of audio per yield
+      if (onProgress) onProgress(Math.round((i / left.length) * 100));
+      await new Promise(function (r) { setTimeout(r); });
+    }
+  }
+  var tail = enc.flush();
+  if (tail.length) chunks.push(tail);
+  if (onProgress) onProgress(100);
+  return new Blob(chunks, { type: 'audio/mpeg' });
+}
+
+function floatTo16(f32) {
+  var out = new Int16Array(f32.length);
+  for (var i = 0; i < f32.length; i++) {
+    var s = Math.max(-1, Math.min(1, f32[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return out;
+}
+
+// ---- visualization ----
 function startViz() {
   if (vizRafId !== null) return;
   var loop = function () {
     vizRafId = requestAnimationFrame(loop);
-    updateSpeedCap();
-    drawBuffer();
+    if (appMode === 'stream') drawBuffer(); else drawFileWave();
   };
   loop();
 }
 
-function stopViz() {
-  if (vizRafId !== null) {
-    cancelAnimationFrame(vizRafId);
-    vizRafId = null;
-  }
-  if (rateLock) rateLock.style.left = '100%';
-  if (maxRateReadout) {
-    maxRateReadout.textContent = '1.00×';
-    maxRateReadout.classList.remove('locked');
-  }
-  if (bufferCtx) bufferCtx.clearRect(0, 0, bufferCanvas.width, bufferCanvas.height);
-}
-
-// Only offer >1.0x when there's enough buffered audio to spend catching up.
-function updateSpeedCap() {
-  var lagSeconds = audioContext ? (writePos - readPos) / audioContext.sampleRate : 0;
-  allowedMaxRate = 1.0 + Math.min(1.0, lagSeconds / FULL_SPEED_HEADROOM);
-
-  // Snap to the slider step so the readout matches what's selectable.
-  allowedMaxRate = Math.round(allowedMaxRate / 0.05) * 0.05;
-  if (allowedMaxRate < 1.0) allowedMaxRate = 1.0;
-
-  // Clamp the live value if the shrinking buffer no longer supports it.
-  if (playbackControl && parseFloat(playbackControl.value) > allowedMaxRate) {
-    playbackControl.value = allowedMaxRate.toFixed(2);
-    if (playbackValue) playbackValue.textContent = allowedMaxRate.toFixed(2);
-  }
-
-  // Position the "locked" overlay over the unreachable part of the track.
-  if (rateLock) {
-    var min = parseFloat(playbackControl.min);
-    var max = parseFloat(playbackControl.max);
-    var pct = ((allowedMaxRate - min) / (max - min)) * 100;
-    rateLock.style.left = Math.max(0, Math.min(100, pct)) + '%';
-  }
-
-  if (bufferedReadout) bufferedReadout.textContent = lagSeconds.toFixed(1) + 's';
-  if (maxRateReadout) {
-    maxRateReadout.textContent = allowedMaxRate.toFixed(2) + '×';
-    maxRateReadout.classList.toggle('locked', allowedMaxRate < 1.95);
-  }
-}
-
-function drawBuffer() {
-  if (!bufferCtx || !circularBuffer) return;
-
-  // Keep the backing store crisp on hi-dpi screens.
+function prepCanvas() {
+  if (!bufferCtx) return null;
   var dpr = window.devicePixelRatio || 1;
   var cssW = bufferCanvas.clientWidth || 480;
   var cssH = bufferCanvas.clientHeight || 90;
@@ -394,24 +695,86 @@ function drawBuffer() {
     bufferCanvas.width = w;
     bufferCanvas.height = h;
   }
+  bufferCtx.clearRect(0, 0, w, h);
+  return { w: w, h: h, dpr: dpr };
+}
 
-  var ctx = bufferCtx;
-  ctx.clearRect(0, 0, w, h);
+// a stable decorative waveform for the idle/empty state
+function getPlaceholder() {
+  if (placeholderPeaks) return placeholderPeaks;
+  var p = new Float32Array(600);
+  for (var i = 0; i < p.length; i++) {
+    p[i] = (0.45 + 0.55 * Math.abs(Math.sin(i * 0.13))) *
+           (0.35 + 0.65 * Math.abs(Math.sin(i * 0.031 + 1)));
+  }
+  placeholderPeaks = p;
+  return p;
+}
+
+// file mode: full-track waveform with a seekable playhead.
+// shows a sample waveform when empty, and fills live when decode failed.
+function drawFileWave() {
+  if (filePeaks && peaksLive && analyser && audioEl && !audioEl.paused && audioEl.duration) {
+    analyser.getFloatTimeDomainData(analyserBuf);
+    var pk = 0;
+    for (var a = 0; a < analyserBuf.length; a++) { var v = Math.abs(analyserBuf[a]); if (v > pk) pk = v; }
+    var b = Math.floor((audioEl.currentTime / audioEl.duration) * filePeaks.length);
+    b = Math.max(0, Math.min(filePeaks.length - 1, b));
+    if (pk > filePeaks[b]) filePeaks[b] = pk;
+    if (pk > peaksMax) peaksMax = pk;
+  }
+
+  var c = prepCanvas();
+  if (!c) return;
+  var ctx = bufferCtx, w = c.w, h = c.h, dpr = c.dpr, mid = h / 2;
+
+  var hasData = filePeaks && peaksMax > 0.005;
+  var peaks = hasData ? filePeaks : getPlaceholder();
+  var scale = hasData ? 1 / peaksMax : 1;
+  var N = peaks.length, cols = Math.min(w, 600), bw = Math.max(1, w / cols);
+
+  var dur = (audioEl && audioEl.duration) || 0;
+  var cur = (audioEl && audioEl.currentTime) || 0;
+  var playFrac = (hasData && dur) ? Math.max(0, Math.min(1, cur / dur)) : 0;
+
+  if (hasData) {
+    ctx.fillStyle = 'rgba(226, 183, 20, 0.10)';
+    ctx.fillRect(0, 0, playFrac * w, h);
+  }
+
+  for (var x = 0; x < cols; x++) {
+    var frac = x / cols;
+    var peak = Math.min(1, (peaks[Math.floor(frac * N)] || 0) * scale);
+    var bh = Math.max(1, peak * h * 0.88);
+    if (!hasData) ctx.fillStyle = 'rgba(100, 102, 105, 0.5)';
+    else ctx.fillStyle = frac <= playFrac ? COLOR_MAIN : COLOR_SUB;
+    ctx.fillRect(frac * w, mid - bh / 2, bw, bh);
+  }
+
+  if (hasData) {
+    ctx.fillStyle = COLOR_MAIN;
+    ctx.fillRect(Math.min(w - 2 * dpr, playFrac * w), 0, 2 * dpr, h);
+  }
+}
+
+// stream mode: rolling circular-buffer view, read head vs live edge
+function drawBuffer() {
+  var c = prepCanvas();
+  if (!c || !circularBuffer || !audioContext) return;
+  var ctx = bufferCtx, w = c.w, h = c.h, dpr = c.dpr;
+  var mid = h / 2;
 
   var sr = audioContext.sampleRate;
   var windowSamples = Math.min(VIZ_SECONDS * sr, writePos);
   if (windowSamples < 1) return;
   var startSample = writePos - windowSamples;
-  var mid = h / 2;
   var cols = Math.min(w, 600);
 
-  // Backlog region: from the playback head to the live edge.
   var readX = ((readPos - startSample) / windowSamples) * w;
   readX = Math.max(0, Math.min(w, readX));
   ctx.fillStyle = 'rgba(226, 183, 20, 0.12)';
   ctx.fillRect(readX, 0, w - readX, h);
 
-  // Waveform envelope (downsampled min/max per column).
   ctx.fillStyle = COLOR_SUB;
   for (var x = 0; x < cols; x++) {
     var a = startSample + Math.floor((windowSamples * x) / cols);
@@ -433,24 +796,30 @@ function drawBuffer() {
     ctx.fillRect(px, yTop, pw, Math.max(1, yBot - yTop));
   }
 
-  // Live edge (write head) — right side.
   ctx.fillStyle = COLOR_ERROR;
   ctx.fillRect(w - 2 * dpr, 0, 2 * dpr, h);
-
-  // Playback head (read) — green/main marker.
   ctx.fillStyle = COLOR_MAIN;
   ctx.fillRect(Math.min(readX, w - 2 * dpr), 0, 2 * dpr, h);
+}
+
+// click the waveform to seek (file mode only)
+if (bufferCanvas) {
+  bufferCanvas.addEventListener('click', function (e) {
+    if (appMode !== 'file' || !audioEl || !audioEl.duration) return;
+    var rect = bufferCanvas.getBoundingClientRect();
+    var frac = (e.clientX - rect.left) / rect.width;
+    audioEl.currentTime = Math.max(0, Math.min(1, frac)) * audioEl.duration;
+    drawFileWave();
+  });
 }
 
 // ---- slider wiring ----
 if (playbackControl) {
   playbackControl.addEventListener('input', function () {
-    var v = parseFloat(playbackControl.value);
-    if (v > allowedMaxRate) {
-      v = allowedMaxRate;
-      playbackControl.value = v.toFixed(2);
-    }
+    var v = currentRate();
     if (playbackValue) playbackValue.textContent = v.toFixed(2);
+    if (audioEl) audioEl.playbackRate = v;
+    updateSpinDuration();
   });
 }
 
@@ -465,7 +834,7 @@ if (reverbMixControl) {
 if (reverbDecayControl) {
   reverbDecayControl.addEventListener('input', function () {
     if (reverbDecayValue) reverbDecayValue.textContent = parseFloat(reverbDecayControl.value).toFixed(1);
-    rebuildImpulse();
+    scheduleImpulse();
   });
 }
 
@@ -482,6 +851,7 @@ if (panControl) {
     var p = parseInt(panControl.value, 10);
     if (panValue) panValue.textContent = formatPan(p);
     applyPan(p / 100);
+    routeOutput();
   });
 }
 
@@ -492,3 +862,8 @@ if (eightdPeriodControl) {
     if (lfoOsc) lfoOsc.frequency.value = 1 / period;
   });
 }
+
+// ---- init ----
+updatePlayIcon();
+updateSpinDuration();
+startViz();   // perpetual: draws the sample waveform while idle, real data once loaded

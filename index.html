@@ -3,19 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>slow playback audio</title>
+  <title>slow playback audio — slow + reverb any track</title>
+
+  <!-- emoji favicon, no file needed -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪐</text></svg>">
+
+  <!-- SEO -->
+  <meta name="description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Upload an mp3 or slow a live tab, then export. Free, no signup.">
+  <meta name="keywords" content="slowed reverb, slow down audio, slowed and reverb maker, 8d audio, bass boost, mp3 slower, slowedrvb">
+  <link rel="canonical" href="https://slow-playback-audio.vercel.app/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="slow playback audio — slow + reverb any track">
+  <meta property="og:description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Free, no signup.">
+  <meta property="og:url" content="https://slow-playback-audio.vercel.app/">
+  <meta property="og:image" content="https://slow-playback-audio.vercel.app/stick.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="slow playback audio — slow + reverb any track">
+  <meta name="twitter:description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Free, no signup.">
+
+  <!-- structured data: tells Google this is a free web app -->
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"slow playback audio","url":"https://slow-playback-audio.vercel.app/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Slow any song down and drench it in reverb, bass boost, and 8D audio in your browser."}
+  </script>
+
+  <!-- analytics -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="xi Si init Ni Bi pr qi Ui $i capture calculateEventProperties Zi register register_once register_for_session unregister unregister_for_session Yi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync Ki identify setPersonProperties unsetPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset setIdentity clearIdentity get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException addExceptionStep captureLog startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty Qi Wi createPersonProfile setInternalOrTestUser Ji Fi tn opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing zi debug mr it getPageViewId captureTraceFeedback captureTraceMetric Ri".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_CK1t90aZYpqnHvQQUP0JRMXF69U7IbQWGZhoKpIIx7r', {
+        api_host: 'https://us.i.posthog.com',
+        defaults: '2026-05-30',
+        person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
+    })
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- mp3 export encoder (only thing the browser can't do natively) -->
+  <script type="module">
+    import * as lamejs from 'https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/+esm';
+    window.lamejs = lamejs;
+  </script>
   <style>
     :root {
-      /* monkeytype "serika dark" palette */
+      /* monkeytype "serika dark" / slowedrvb palette */
       --bg: #323437;
       --main: #e2b714;
       --sub: #646669;
       --sub-alt: #2c2e31;
       --text: #d1d0c5;
       --error: #ca4754;
+      --pink: #ff007a;
+      --inner: #262626;
+      --rotation-duration: 1s;
     }
 
     *, *::before, *::after {
@@ -23,6 +66,8 @@
       margin: 0;
       padding: 0;
     }
+
+    [hidden] { display: none !important; }
 
     body {
       font-family: 'Roboto Mono', ui-monospace, 'JetBrains Mono', Menlo, monospace;
@@ -38,7 +83,32 @@
 
     .card {
       width: 100%;
-      max-width: 520px;
+      max-width: 1080px;
+    }
+
+    /* two columns: vinyl left (50%), controls right (50%), matched heights */
+    .layout {
+      display: flex;
+      gap: 32px;
+      align-items: stretch;
+    }
+
+    .vinyl-col {
+      flex: 1 1 50%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .controls-col {
+      flex: 1 1 50%;
+      min-width: 0;
+    }
+
+    @media (max-width: 760px) {
+      .layout { flex-direction: column; gap: 24px; }
     }
 
     h1 {
@@ -56,14 +126,14 @@
     .subtitle {
       font-size: 0.8125rem;
       color: var(--sub);
-      margin: 6px 0 28px;
+      margin: 6px 0 24px;
       line-height: 1.6;
     }
 
     .controls {
       display: flex;
       gap: 8px;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
     }
 
     button {
@@ -77,7 +147,7 @@
       color: var(--sub);
       background: var(--sub-alt);
       cursor: pointer;
-      transition: color 0.12s, background 0.12s, transform 0.1s;
+      transition: color 0.12s, background 0.12s, transform 0.1s, filter 0.12s;
     }
 
     button:hover {
@@ -94,15 +164,32 @@
       cursor: not-allowed;
     }
 
-    .btn-start:hover {
-      background: var(--main);
-      color: var(--bg);
-    }
+    /* slowedrvb-style filled buttons */
+    .btn-stream { background: var(--pink); color: var(--text); }
+    .btn-stream:hover { background: var(--pink); color: var(--text); filter: brightness(1.12); }
+    .btn-choose { background: var(--main); color: var(--bg); }
+    .btn-choose:hover { background: var(--main); color: var(--bg); filter: brightness(1.12); }
+    .btn-export { background: var(--sub-alt); color: var(--text); }
 
-    .btn-clear:hover {
-      background: var(--error);
-      color: var(--bg);
+    .drag-hint {
+      font-size: 0.6875rem;
+      color: var(--sub);
+      margin: 0 0 16px 2px;
     }
+    .drag-hint b { color: var(--text); font-weight: 600; }
+
+    .advanced-toggle {
+      width: 100%;
+      margin-top: 12px;
+      background: transparent;
+      color: var(--sub);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 9px;
+    }
+    .advanced-toggle:hover { background: var(--sub-alt); color: var(--text); }
 
     .toggle-row {
       display: flex;
@@ -137,19 +224,149 @@
       color: var(--bg);
     }
 
-    .eightd-speed {
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid var(--bg);
+    /* ---- vinyl player (design from slowedrvb.com), 25% larger ---- */
+    .vinyl-player {
+      position: relative;
+      width: min(100%, 525px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
     }
 
-    .slider-section.disabled {
-      opacity: 0.4;
+    .disc {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      /* conic sheen over a solid label keeps the spin visible without groove lines */
+      background:
+        conic-gradient(from 0deg,
+          rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.06),
+          rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.12)),
+        var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
     }
 
-    .slider-section.disabled input[type="range"] {
+    .disc.spinning {
+      animation: spin var(--rotation-duration) linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .disc.dragover { outline: 3px dashed var(--pink); outline-offset: 10px; }
+
+    .inner-disc {
+      width: 34%;
+      height: 34%;
+      border-radius: 50%;
+      background: var(--inner);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.25);
+    }
+
+    /* song name printed on the label — rides along as the disc spins */
+    .disc-label {
+      max-width: 84%;
+      text-align: center;
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+
+    .stick {
+      position: absolute;
+      top: -20%;
+      left: 54%;
+      width: 78%;
+      z-index: 10;
+      transform-origin: center;
       pointer-events: none;
     }
+
+    /* the tonearm only swings while the record is playing */
+    .disc.spinning ~ .stick {
+      animation: swing 2s ease-in-out infinite;
+    }
+
+    @keyframes swing {
+      0%, 100% { transform: rotate(-20deg); }
+      50% { transform: rotate(10deg); }
+    }
+
+    /* player bar: play/pause + waveform scrubber, under the vinyl, both modes */
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      margin-top: 32px;
+    }
+
+    .play-btn {
+      flex: 0 0 auto;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--main);
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .play-btn:hover { background: var(--main); color: var(--bg); filter: brightness(1.1); }
+    .play-btn:disabled { filter: none; }
+    .play-btn svg { width: 52%; height: 52%; fill: var(--bg); }
+
+    .play-col {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .refresh-btn {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      padding: 0;
+      font-size: 1.15rem;
+      line-height: 1;
+      background: var(--sub-alt);
+      color: var(--text);
+    }
+
+    .wave-wrap {
+      flex: 1;
+      min-width: 0;
+      border: 2px solid var(--sub);
+      border-radius: 10px;
+      padding: 7px;
+      background: var(--sub-alt);
+    }
+
+    .player canvas {
+      display: block;
+      width: 100%;
+      height: 84px;
+      border-radius: 6px;
+      background: var(--bg);
+      cursor: pointer;
+    }
+
+    .slider-section.disabled { opacity: 0.4; }
+    .slider-section.disabled input[type="range"] { pointer-events: none; }
 
     .slider-section {
       background: var(--sub-alt);
@@ -185,10 +402,6 @@
       font-weight: 400;
     }
 
-    .slider-wrap {
-      position: relative;
-    }
-
     input[type="range"] {
       -webkit-appearance: none;
       appearance: none;
@@ -211,9 +424,7 @@
       transition: transform 0.12s;
     }
 
-    input[type="range"]::-webkit-slider-thumb:hover {
-      transform: scale(1.18);
-    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.18); }
 
     input[type="range"]::-moz-range-thumb {
       width: 18px;
@@ -224,23 +435,6 @@
       border: none;
     }
 
-    /* dim, locked-out portion of the speed slider when the buffer can't sustain it */
-    .slider-lock {
-      position: absolute;
-      top: 50%;
-      right: 0;
-      height: 6px;
-      transform: translateY(-50%);
-      border-radius: 0 3px 3px 0;
-      background: repeating-linear-gradient(
-        45deg,
-        rgba(202, 71, 84, 0.35) 0 4px,
-        rgba(202, 71, 84, 0.12) 4px 8px
-      );
-      pointer-events: none;
-      transition: left 0.15s ease;
-    }
-
     .ticks {
       display: flex;
       justify-content: space-between;
@@ -248,77 +442,12 @@
       padding: 0 2px;
     }
 
-    .ticks span {
-      font-size: 0.6875rem;
-      color: var(--sub);
-    }
+    .ticks span { font-size: 0.6875rem; color: var(--sub); }
 
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 12px;
-      font-size: 0.6875rem;
-      color: var(--sub);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .meta b {
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    .meta .locked {
-      color: var(--error);
-    }
-
-    .buffer-viz {
-      background: var(--sub-alt);
-      border-radius: 10px;
-      padding: 16px 20px 18px;
-      margin-top: 12px;
-    }
-
-    .buffer-viz-label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.6875rem;
-      color: var(--sub);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 10px;
-    }
-
-    .legend {
-      display: flex;
-      gap: 14px;
-      text-transform: none;
-      letter-spacing: 0;
-    }
-
-    .legend span {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 2px;
-      display: inline-block;
-    }
-
-    .dot-read { background: var(--main); }
-    .dot-write { background: var(--error); }
-
-    #buffer-canvas {
-      display: block;
-      width: 100%;
-      height: 90px;
-      border-radius: 6px;
-      background: var(--bg);
+    .eightd-speed {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--bg);
     }
 
     .status {
@@ -329,125 +458,132 @@
       min-height: 1.2em;
     }
 
-    .status.recording { color: var(--main); }
     .status.streaming { color: var(--main); }
     .status.error { color: var(--error); }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>slow playback audio</h1>
-    <p class="subtitle">stream audio from a browser tab, slow it down, and drench it in reverb &mdash; in real time.</p>
-
-    <div class="controls">
-      <button class="btn-start" id="btn-record" onclick="start_audio()">start</button>
-      <button class="btn-clear" id="btn-clear" onclick="clear_buffer()" disabled>clear buffer</button>
-      <button class="btn-stop" id="btn-stop" onclick="stop_audio()">stop</button>
-    </div>
-
-    <div class="slider-section">
-      <div class="slider-label">
-        <span>playback rate</span>
-        <span class="rate-value"><span id="playback-rate-value">0.80</span><span class="rate-suffix">&times;</span></span>
-      </div>
-      <div class="slider-wrap">
-        <input type="range" id="playback-rate-control" min="0.25" max="2" step="0.05" value="0.80">
-        <div class="slider-lock" id="rate-lock" style="left: 100%;"></div>
-      </div>
-      <div class="ticks">
-        <span>0.25&times;</span>
-        <span>1.0&times;</span>
-        <span>2.0&times;</span>
-      </div>
-      <div class="meta">
-        <span>buffered <b id="buffered-readout">0.0s</b></span>
-        <span>max speed <b id="maxrate-readout">1.00&times;</b></span>
-      </div>
-    </div>
-
-    <div class="slider-section">
-      <div class="slider-label">
-        <span>reverb mix</span>
-        <span class="rate-value"><span id="reverb-mix-value">40</span><span class="rate-suffix">%</span></span>
-      </div>
-      <input type="range" id="reverb-mix-control" min="0" max="100" step="1" value="40">
-      <div class="ticks">
-        <span>dry</span>
-        <span>50%</span>
-        <span>wet</span>
-      </div>
-    </div>
-
-    <div class="slider-section">
-      <div class="slider-label">
-        <span>reverb decay</span>
-        <span class="rate-value"><span id="reverb-decay-value">3.0</span><span class="rate-suffix">s</span></span>
-      </div>
-      <input type="range" id="reverb-decay-control" min="0.5" max="8" step="0.5" value="3.0">
-      <div class="ticks">
-        <span>0.5s</span>
-        <span>4s</span>
-        <span>8s</span>
-      </div>
-    </div>
-
-    <div class="slider-section">
-      <div class="slider-label">
-        <span>bass boost</span>
-        <span class="rate-value">+<span id="bass-boost-value">0.0</span><span class="rate-suffix">dB</span></span>
-      </div>
-      <input type="range" id="bass-boost-control" min="0" max="15" step="0.5" value="0">
-      <div class="ticks">
-        <span>flat</span>
-        <span>+7.5dB</span>
-        <span>+15dB</span>
-      </div>
-    </div>
-
-    <div class="slider-section" id="pan-section">
-      <div class="slider-label">
-        <span>3d pan</span>
-        <span class="rate-value"><span id="pan-value">C</span></span>
-      </div>
-      <input type="range" id="pan-control" min="-100" max="100" step="1" value="0">
-      <div class="ticks">
-        <span>left</span>
-        <span>center</span>
-        <span>right</span>
-      </div>
-    </div>
-
-    <div class="slider-section">
-      <div class="toggle-row">
-        <span class="label">8d audio<small>auto-sweep left &harr; right</small></span>
-        <button class="toggle" id="btn-8d" onclick="toggle_8d()" aria-pressed="false">off</button>
-      </div>
-      <div class="eightd-speed" id="eightd-speed" hidden>
-        <div class="slider-label">
-          <span>orbit speed</span>
-          <span class="rate-value"><span id="eightd-period-value">8.0</span><span class="rate-suffix">s</span></span>
+    <div class="layout">
+      <div class="vinyl-col">
+        <div class="vinyl-player">
+          <div class="disc" id="disc">
+            <div class="inner-disc"><span class="disc-label" id="track-name"></span></div>
+          </div>
+          <img class="stick" src="stick.svg" alt="">
         </div>
-        <input type="range" id="eightd-period-control" min="2" max="20" step="0.5" value="8">
-        <div class="ticks">
-          <span>2s fast</span>
-          <span>8s</span>
-          <span>20s slow</span>
+        <div class="player">
+          <div class="play-col">
+            <button class="play-btn" id="btn-play" onclick="toggle_play()" aria-label="play / pause" disabled></button>
+            <button class="refresh-btn" id="btn-refresh" onclick="refresh_stream()" aria-label="jump to live (clear buffer)" title="jump to live" hidden>&#8635;</button>
+          </div>
+          <div class="wave-wrap"><canvas id="buffer-canvas" width="480" height="96"></canvas></div>
         </div>
       </div>
-    </div>
 
-    <div class="buffer-viz">
-      <div class="buffer-viz-label">
-        <span>buffer &mdash; last 60s</span>
-        <span class="legend">
-          <span><i class="dot dot-read"></i>playback head</span>
-          <span><i class="dot dot-write"></i>live</span>
-        </span>
+      <div class="controls-col">
+        <h1>slow playback audio</h1>
+        <p class="subtitle">slow any track down and drench it in reverb &mdash; upload a file, or hit <b style="color:var(--pink)">stream (tab)</b> to slow a live browser tab.</p>
+
+        <div class="controls" id="file-controls">
+          <button class="btn-stream" id="btn-stream" onclick="stream_tab()">stream (tab)</button>
+          <button class="btn-choose" id="btn-choose" onclick="choose_file()">choose mp3 file</button>
+          <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
+          <input type="file" id="file-input" accept="audio/*" hidden>
+        </div>
+        <p class="drag-hint" id="drag-hint">or drag a file onto the <b>disc</b></p>
+
+        <div class="slider-section">
+          <div class="slider-label">
+            <span>playback rate</span>
+            <span class="rate-value"><span id="playback-rate-value">1.00</span><span class="rate-suffix">&times;</span></span>
+          </div>
+          <input type="range" id="playback-rate-control" min="0.25" max="1" step="any" value="1">
+          <div class="ticks">
+            <span>0.25&times;</span>
+            <span>0.6&times;</span>
+            <span>1.0&times;</span>
+          </div>
+        </div>
+
+        <div class="slider-section">
+          <div class="slider-label">
+            <span>reverb mix</span>
+            <span class="rate-value"><span id="reverb-mix-value">0</span><span class="rate-suffix">%</span></span>
+          </div>
+          <input type="range" id="reverb-mix-control" min="0" max="100" step="any" value="0">
+          <div class="ticks">
+            <span>dry</span>
+            <span>50%</span>
+            <span>wet</span>
+          </div>
+        </div>
+
+        <div class="slider-section">
+          <div class="slider-label">
+            <span>bass boost</span>
+            <span class="rate-value">+<span id="bass-boost-value">0.0</span><span class="rate-suffix">dB</span></span>
+          </div>
+          <input type="range" id="bass-boost-control" min="0" max="15" step="any" value="0">
+          <div class="ticks">
+            <span>flat</span>
+            <span>+7.5dB</span>
+            <span>+15dB</span>
+          </div>
+        </div>
+
+        <button class="advanced-toggle" id="btn-advanced" onclick="toggle_advanced()" aria-expanded="false">show advanced &#9662;</button>
+
+        <div id="advanced" hidden>
+          <div class="slider-section">
+            <div class="slider-label">
+              <span>reverb decay</span>
+              <span class="rate-value"><span id="reverb-decay-value">3.0</span><span class="rate-suffix">s</span></span>
+            </div>
+            <input type="range" id="reverb-decay-control" min="0.5" max="8" step="any" value="3.0">
+            <div class="ticks">
+              <span>0.5s</span>
+              <span>4s</span>
+              <span>8s</span>
+            </div>
+          </div>
+
+          <div class="slider-section" id="pan-section">
+            <div class="slider-label">
+              <span>3d pan</span>
+              <span class="rate-value"><span id="pan-value">C</span></span>
+            </div>
+            <input type="range" id="pan-control" min="-100" max="100" step="any" value="0">
+            <div class="ticks">
+              <span>left</span>
+              <span>center</span>
+              <span>right</span>
+            </div>
+          </div>
+
+          <div class="slider-section">
+            <div class="toggle-row">
+              <span class="label">8d audio<small>auto-sweep left &harr; right</small></span>
+              <button class="toggle" id="btn-8d" onclick="toggle_8d()" aria-pressed="false">off</button>
+            </div>
+            <div class="eightd-speed" id="eightd-speed" hidden>
+              <div class="slider-label">
+                <span>orbit speed</span>
+                <span class="rate-value"><span id="eightd-period-value">8.0</span><span class="rate-suffix">s</span></span>
+              </div>
+              <input type="range" id="eightd-period-control" min="2" max="20" step="any" value="8">
+              <div class="ticks">
+                <span>2s fast</span>
+                <span>8s</span>
+                <span>20s slow</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status" id="status">file mode &mdash; choose an mp3 or drag one onto the disc.</div>
       </div>
-      <canvas id="buffer-canvas" width="480" height="90"></canvas>
     </div>
-
-    <div class="status" id="status">tip: pick a chrome tab and enable &ldquo;share tab audio&rdquo; in the picker.</div>
   </div>
 
   <script src="index.js"></script>
