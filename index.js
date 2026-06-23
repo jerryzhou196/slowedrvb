@@ -8,7 +8,7 @@ var audioContext;
 var bassFilter, convolverNode, dryGain, wetGain, outputBus, pannerNode;
 
 // ---- file mode (default) ----
-var audioEl, mediaSource, filePeaks = null, peaksMax = 0.0001, peaksLive = false;
+var audioEl, mediaSource, audioObjectUrl = '', filePeaks = null, peaksMax = 0.0001, peaksLive = false;
 var analyser, analyserBuf, placeholderPeaks = null;
 var sourceBuffer = null, isMp3 = false;   // decoded buffer + flag, for mp3 export
 var WAVE_N = 1200;
@@ -17,7 +17,7 @@ var mobileSourceStartedAt = 0;
 var mobileSourceOffset = 0;
 var mobileSourceRate = 1;
 var mobileSourcePlaying = false;
-var filePlaybackEngine = 'media'; // 'media' | 'buffer'
+var filePlaybackEngine = 'media'; // 'media' | 'buffer' | 'native'
 
 // ---- streaming mode ----
 var streamSource, scriptNode, currentAudioTrack;
@@ -105,7 +105,7 @@ function setRateRange(maxRate) {
   if (currentRate() > maxRate) {
     playbackControl.value = maxRate;
     if (playbackValue) playbackValue.textContent = maxRate.toFixed(2);
-    if (audioEl) audioEl.playbackRate = maxRate;
+    applyAudioElementPlaybackRate();
     updateSpinDuration();
   }
   if (rateTicks && rateTicks.children.length >= 3) {
@@ -297,16 +297,87 @@ function configureAudioElementPitch(el) {
   try { el.webkitPreservesPitch = false; } catch (e) {}
 }
 
-function ensureAudioElement() {
-  if (audioEl) return;
-  audioEl = new Audio();
+function applyAudioElementPlaybackRate() {
+  if (!audioEl) return;
+  var rate = currentRate();
+  try { audioEl.playbackRate = rate; } catch (e) {}
+  try { audioEl.defaultPlaybackRate = rate; } catch (e) {}
+}
+
+function revokeAudioObjectUrl() {
+  if (!audioObjectUrl) return;
+  URL.revokeObjectURL(audioObjectUrl);
+  audioObjectUrl = '';
+}
+
+function clearAudioElementSource() {
+  if (!audioEl) return;
+  try { audioEl.pause(); } catch (e) {}
+  audioEl.removeAttribute('src');
+  try { audioEl.load(); } catch (e) {}
+  revokeAudioObjectUrl();
+}
+
+function setAudioElementFileSource(file) {
+  if (!audioEl) ensureAudioElement();
+  revokeAudioObjectUrl();
+  audioObjectUrl = URL.createObjectURL(file);
+  audioEl.src = audioObjectUrl;
+  try { audioEl.load(); } catch (e) {}
+}
+
+function handleAudioElementPlayError(e) {
+  setSpin(false);
+  updatePlayIcon();
+  updateMediaSessionState();
+  if (useNativeFilePlayback()) setMobileStatus('tap play to start audio.', 'error');
+  else setStatus('playback blocked - tap play again.', 'error');
+}
+
+function playAudioElement() {
+  if (!audioEl || !audioEl.src) return Promise.resolve(false);
+  if (audioContext && audioContext.state === 'suspended' && !useNativeFilePlayback()) audioContext.resume();
+  configureAudioElementPitch(audioEl);
+  applyAudioElementPlaybackRate();
+  try {
+    var playPromise = audioEl.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      return playPromise.then(function () {
+        return true;
+      }, function (e) {
+        handleAudioElementPlayError(e);
+        throw e;
+      });
+    }
+    return Promise.resolve(true);
+  } catch (e) {
+    handleAudioElementPlayError(e);
+    return Promise.reject(e);
+  }
+}
+
+function ensureAudioElement(forceNew) {
+  if (audioEl && !forceNew) return;
+  if (audioEl) {
+    clearAudioElementSource();
+    if (audioEl.parentNode) audioEl.parentNode.removeChild(audioEl);
+  }
+
+  audioEl = document.createElement('audio');
   audioEl.preload = 'auto';
   audioEl.playsInline = true;
   audioEl.setAttribute('playsinline', '');
+  audioEl.setAttribute('webkit-playsinline', '');
+  audioEl.setAttribute('aria-hidden', 'true');
   configureAudioElementPitch(audioEl);
   audioEl.addEventListener('play', function () { setSpin(true); updatePlayIcon(); updateMediaSessionState(); });
   audioEl.addEventListener('pause', function () { setSpin(false); updatePlayIcon(); updateMediaSessionState(); });
   audioEl.addEventListener('ended', function () { setSpin(false); updatePlayIcon(); updateMediaSessionState(); });
+  audioEl.addEventListener('loadedmetadata', updateMediaSessionState);
+  audioEl.addEventListener('durationchange', updateMediaSessionState);
+  audioEl.addEventListener('ratechange', updateMediaSessionState);
+  audioEl.addEventListener('timeupdate', updateMediaSessionState);
+  document.body.appendChild(audioEl);
 }
 
 // ---- build the shared effect chain once ----
@@ -351,6 +422,10 @@ function ensureAudio() {
 
 function useMobileBufferPlayback() {
   return appMode === 'file' && filePlaybackEngine === 'buffer' && !!sourceBuffer;
+}
+
+function useNativeFilePlayback() {
+  return appMode === 'file' && filePlaybackEngine === 'native';
 }
 
 function mobileBufferCurrentTime() {
@@ -497,34 +572,46 @@ async function load_file(file) {
   stopMobileBufferSource(false);
   appMode = 'file';
   var mobileMode = isMobileViewport();
-  filePlaybackEngine = mobileMode ? 'buffer' : 'media';
+  var nativeMobileMode = mobileMode && isAppleMobileDevice();
+  // iOS background/lock-screen playback needs a native media element, not a Web Audio buffer source.
+  filePlaybackEngine = nativeMobileMode ? 'native' : (mobileMode ? 'buffer' : 'media');
 
-  ensureAudioElement();
-  if (!mediaSource) mediaSource = audioContext.createMediaElementSource(audioEl);  // once per element
-  mediaSource.disconnect();
+  if (nativeMobileMode && mediaSource) {
+    try { mediaSource.disconnect(); } catch (e) {}
+    mediaSource = null;
+    ensureAudioElement(true);
+  } else {
+    ensureAudioElement();
+  }
+  if (!nativeMobileMode) {
+    if (!mediaSource) mediaSource = audioContext.createMediaElementSource(audioEl);  // once per element
+    mediaSource.disconnect();
+  }
 
   setRateRange(1.5);
   audioEl.pause();
   configureAudioElementPitch(audioEl);
-  audioEl.playbackRate = currentRate();
+  applyAudioElementPlaybackRate();
   fileName = file.name || '';
   isMp3 = /audio\/(mpeg|mp3)/i.test(file.type) || /\.mp3$/i.test(fileName);
   setStatus('loading...', '');
 
-  if (mobileMode) {
-    audioEl.removeAttribute('src');
-    audioEl.load();
+  if (nativeMobileMode) {
+    setAudioElementFileSource(file);
+    decodeFile(file);
+  } else if (mobileMode) {
+    clearAudioElementSource();
     await decodeFile(file);
     if (!sourceBuffer) {
       filePlaybackEngine = 'media';
       mediaSource.connect(bassFilter);
-      audioEl.src = URL.createObjectURL(file);
+      setAudioElementFileSource(file);
       configureAudioElementPitch(audioEl);
-      audioEl.playbackRate = currentRate();
+      applyAudioElementPlaybackRate();
     }
   } else {
     mediaSource.connect(bassFilter);
-    audioEl.src = URL.createObjectURL(file);
+    setAudioElementFileSource(file);
     decodeFile(file);
   }
 
@@ -578,6 +665,12 @@ if (fileInput) {
 
 function isMobileViewport() {
   return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+}
+
+function isAppleMobileDevice() {
+  var ua = navigator.userAgent || '';
+  var platform = navigator.platform || '';
+  return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
 }
 
 function readStoredApiKey() {
@@ -740,10 +833,10 @@ window.download_youtube = async function () {
     await load_file(file);
     setMobileStatus('saved locally.', 'ready');
 
-    if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+    if (audioContext && audioContext.state === 'suspended' && !useNativeFilePlayback()) await audioContext.resume();
     try {
       if (useMobileBufferPlayback()) startMobileBufferPlayback(0);
-      else if (audioEl) await audioEl.play();
+      else if (audioEl) await playAudioElement();
     } catch (e) {}
   } catch (e) {
     setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
@@ -780,8 +873,7 @@ window.toggle_play = function () {
       return;
     }
     if (!audioEl || !audioEl.src) { setStatus('choose a file first.', ''); return; }
-    if (audioContext && audioContext.state === 'suspended') audioContext.resume();
-    if (audioEl.paused) audioEl.play(); else audioEl.pause();
+    if (audioEl.paused) playAudioElement().catch(function () {}); else audioEl.pause();
   }
 };
 
@@ -1250,7 +1342,7 @@ if (playbackControl) {
     var v = currentRate();
     if (playbackValue) playbackValue.textContent = v.toFixed(2);
     if (useMobileBufferPlayback()) restartMobileBufferAtCurrentRate();
-    else if (audioEl) audioEl.playbackRate = v;
+    else applyAudioElementPlaybackRate();
     updateSpinDuration();
     updateMediaSessionState();
   });
