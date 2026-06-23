@@ -69,6 +69,23 @@
 
     [hidden] { display: none !important; }
 
+    /* react-fade-in style: direct children fade in, staggered 50ms */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .vinyl-col > *, .controls-col > * { opacity: 0; animation: fadeIn 0.4s ease forwards; }
+    .vinyl-col > *:nth-child(1), .controls-col > *:nth-child(1) { animation-delay: 0.05s; }
+    .vinyl-col > *:nth-child(2), .controls-col > *:nth-child(2) { animation-delay: 0.10s; }
+    .vinyl-col > *:nth-child(3), .controls-col > *:nth-child(3) { animation-delay: 0.15s; }
+    .vinyl-col > *:nth-child(4), .controls-col > *:nth-child(4) { animation-delay: 0.20s; }
+    .vinyl-col > *:nth-child(5), .controls-col > *:nth-child(5) { animation-delay: 0.25s; }
+    .vinyl-col > *:nth-child(6), .controls-col > *:nth-child(6) { animation-delay: 0.30s; }
+    .vinyl-col > *:nth-child(7), .controls-col > *:nth-child(7) { animation-delay: 0.35s; }
+    .vinyl-col > *:nth-child(8), .controls-col > *:nth-child(8) { animation-delay: 0.40s; }
+    .vinyl-col > *:nth-child(9), .controls-col > *:nth-child(9) { animation-delay: 0.45s; }
+    .vinyl-col > *:nth-child(10), .controls-col > *:nth-child(10) { animation-delay: 0.50s; }
+    @media (prefers-reduced-motion: reduce) {
+      .vinyl-col > *, .controls-col > * { opacity: 1; animation: none; }
+    }
+
     body {
       font-family: 'Roboto Mono', ui-monospace, 'JetBrains Mono', Menlo, monospace;
       background: var(--bg);
@@ -498,11 +515,11 @@
             <span>playback rate</span>
             <span class="rate-value"><span id="playback-rate-value">1.00</span><span class="rate-suffix">&times;</span></span>
           </div>
-          <input type="range" id="playback-rate-control" min="0.25" max="1" step="any" value="1">
-          <div class="ticks">
-            <span>0.25&times;</span>
-            <span>0.6&times;</span>
-            <span>1.0&times;</span>
+          <input type="range" id="playback-rate-control" min="0" max="1.5" step="any" value="1">
+          <div class="ticks" id="rate-ticks">
+            <span>0&times;</span>
+            <span>0.75&times;</span>
+            <span>1.5&times;</span>
           </div>
         </div>
 

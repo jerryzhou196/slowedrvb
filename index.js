@@ -61,6 +61,7 @@ var btnAdvanced = document.querySelector('#btn-advanced');
 var advanced = document.querySelector('#advanced');
 var exportBtn = document.querySelector('#btn-export');
 var refreshBtn = document.querySelector('#btn-refresh');
+var rateTicks = document.querySelector('#rate-ticks');
 
 function setStatus(text, className) {
   if (!statusEl) return;
@@ -70,6 +71,24 @@ function setStatus(text, className) {
 
 function currentRate() {
   return playbackControl ? parseFloat(playbackControl.value) : 1.0;
+}
+
+// 0× floor always; uploads can speed up to 1.5×, live streams cap at 1× (can't read past the live edge)
+function setRateRange(maxRate) {
+  if (!playbackControl) return;
+  playbackControl.min = 0;
+  playbackControl.max = maxRate;
+  if (currentRate() > maxRate) {
+    playbackControl.value = maxRate;
+    if (playbackValue) playbackValue.textContent = maxRate.toFixed(2);
+    if (audioEl) audioEl.playbackRate = maxRate;
+    updateSpinDuration();
+  }
+  if (rateTicks && rateTicks.children.length >= 3) {
+    rateTicks.children[0].textContent = '0×';
+    rateTicks.children[1].textContent = parseFloat((maxRate / 2).toFixed(2)) + '×';
+    rateTicks.children[2].textContent = parseFloat(maxRate.toFixed(2)) + '×';
+  }
 }
 
 function showTrackName() {
@@ -307,6 +326,7 @@ function load_file(file) {
   mediaSource.disconnect();
   mediaSource.connect(bassFilter);
 
+  setRateRange(1.5);
   audioEl.src = URL.createObjectURL(file);
   audioEl.playbackRate = currentRate();
   fileName = file.name || '';
@@ -418,6 +438,7 @@ window.stream_tab = async function () {
   if (mediaSource) mediaSource.disconnect();
   stopStreamFully();
   appMode = 'stream';
+  setRateRange(1);
   startCapture(displayStream, audioTracks);
   updateModeUI();
 };
