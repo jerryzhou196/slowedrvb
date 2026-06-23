@@ -202,6 +202,55 @@
     }
     .drag-hint b { color: var(--text); font-weight: 600; }
 
+    .mobile-youtube-panel {
+      display: none;
+    }
+
+    .mobile-field {
+      width: 100%;
+      margin-top: 10px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      color: var(--text);
+      background: var(--sub-alt);
+      outline: none;
+    }
+
+    .mobile-field:focus {
+      border-color: var(--main);
+    }
+
+    .mobile-field::placeholder {
+      color: var(--sub);
+    }
+
+    .mobile-youtube-panel button {
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 6px;
+      background: var(--main);
+      color: var(--bg);
+    }
+
+    .mobile-youtube-status {
+      min-height: 1.2em;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--sub);
+    }
+
+    .mobile-youtube-status.error {
+      color: var(--error);
+    }
+
+    .mobile-youtube-status.ready {
+      color: var(--main);
+    }
+
     .advanced-toggle {
       width: 100%;
       margin-top: 12px;
@@ -507,6 +556,68 @@
       background: var(--text);
       color: var(--bg);
     }
+
+    @media (max-width: 760px) {
+      body {
+        align-items: flex-start;
+        padding: 16px;
+      }
+
+      .card {
+        max-width: 440px;
+        margin: 0 auto;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      .vinyl-col,
+      .controls-col > h1,
+      .subtitle,
+      .controls,
+      .drag-hint,
+      .advanced-toggle,
+      #advanced {
+        display: none;
+      }
+
+      .controls-col {
+        width: 100%;
+      }
+
+      .controls-col > * {
+        opacity: 1;
+        animation: none;
+      }
+
+      .mobile-youtube-panel {
+        display: block;
+      }
+
+      .slider-section {
+        margin-top: 14px;
+        padding: 18px 16px;
+      }
+
+      .slider-label {
+        margin-bottom: 16px;
+      }
+
+      input[type="range"] {
+        height: 8px;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -533,6 +644,13 @@
         <h1>slow playback audio</h1>
         <p class="subtitle">slow any track down and drench it in reverb &mdash; upload a file, or hit <b style="color:var(--pink)">stream (tab)</b> to slow a live browser tab.</p>
 
+        <div class="mobile-youtube-panel" id="mobile-youtube-panel">
+          <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
+          <input class="mobile-field" id="youtube-api-key-input" type="password" autocomplete="off" placeholder="api key" aria-label="api key">
+          <button id="btn-youtube-download" onclick="download_youtube()">download</button>
+          <div class="mobile-youtube-status" id="mobile-youtube-status" aria-live="polite"></div>
+        </div>
+
         <div class="controls" id="file-controls">
           <button class="btn-stream" id="btn-stream" onclick="stream_tab()">stream (tab)</button>
           <button class="btn-choose" id="btn-choose" onclick="choose_file()">choose mp3 file</button>
@@ -541,7 +659,7 @@
         </div>
         <p class="drag-hint" id="drag-hint">or drag a file onto the <b>disc</b></p>
 
-        <div class="slider-section">
+        <div class="slider-section slider-rate">
           <div class="slider-label">
             <span>playback rate</span>
             <span class="rate-value"><span id="playback-rate-value">1.00</span><span class="rate-suffix">&times;</span></span>
@@ -554,7 +672,7 @@
           </div>
         </div>
 
-        <div class="slider-section">
+        <div class="slider-section slider-reverb">
           <div class="slider-label">
             <span>reverb mix</span>
             <span class="rate-value"><span id="reverb-mix-value">0</span><span class="rate-suffix">%</span></span>
@@ -567,7 +685,7 @@
           </div>
         </div>
 
-        <div class="slider-section">
+        <div class="slider-section slider-bass">
           <div class="slider-label">
             <span>bass boost</span>
             <span class="rate-value">+<span id="bass-boost-value">0.0</span><span class="rate-suffix">dB</span></span>

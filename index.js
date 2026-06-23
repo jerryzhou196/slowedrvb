@@ -63,11 +63,28 @@ var streamBtn = document.querySelector('#btn-stream');
 var exportBtn = document.querySelector('#btn-export');
 var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
+var youtubeUrlInput = document.querySelector('#youtube-url-input');
+var youtubeApiKeyInput = document.querySelector('#youtube-api-key-input');
+var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
+var youtubeStatusEl = document.querySelector('#mobile-youtube-status');
+
+var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
+var YOUTUBE_API_KEY_STORAGE = 'slowedrvb.youtubeApiKey';
+var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
+var YOUTUBE_STORE_NAME = 'youtube';
+var YOUTUBE_LATEST_KEY = 'latest';
+var mobileLoadedYoutubeUrl = '';
 
 function setStatus(text, className) {
   if (!statusEl) return;
   statusEl.textContent = text;
   statusEl.className = 'status' + (className ? ' ' + className : '');
+}
+
+function setMobileStatus(text, className) {
+  if (!youtubeStatusEl) return;
+  youtubeStatusEl.textContent = text;
+  youtubeStatusEl.className = 'mobile-youtube-status' + (className ? ' ' + className : '');
 }
 
 function currentRate() {
@@ -111,6 +128,7 @@ function isPlaying() {
 
 function updatePlayIcon() {
   if (playBtn) playBtn.innerHTML = isPlaying() ? ICON_PAUSE : ICON_PLAY;
+  updateMobileYoutubeAction();
 }
 
 function showPlayButton() {
@@ -375,6 +393,194 @@ if (fileInput) {
   fileInput.addEventListener('change', function () {
     var f = fileInput.files && fileInput.files[0];
     if (f) load_file(f);
+  });
+}
+
+function isMobileViewport() {
+  return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+}
+
+function readStoredApiKey() {
+  try {
+    return localStorage.getItem(YOUTUBE_API_KEY_STORAGE) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function writeStoredApiKey(value) {
+  try {
+    if (value) localStorage.setItem(YOUTUBE_API_KEY_STORAGE, value);
+    else localStorage.removeItem(YOUTUBE_API_KEY_STORAGE);
+  } catch (e) {}
+}
+
+function openYoutubeDb() {
+  return new Promise(function (resolve, reject) {
+    if (!window.indexedDB) {
+      reject(new Error('local media storage is unavailable.'));
+      return;
+    }
+
+    var req = indexedDB.open(YOUTUBE_DB_NAME, 1);
+    req.onupgradeneeded = function () {
+      req.result.createObjectStore(YOUTUBE_STORE_NAME);
+    };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error || new Error('could not open local media storage.')); };
+  });
+}
+
+function saveYoutubeTrack(file, sourceUrl) {
+  return openYoutubeDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(YOUTUBE_STORE_NAME, 'readwrite');
+      tx.objectStore(YOUTUBE_STORE_NAME).put({
+        blob: file,
+        name: file.name,
+        type: file.type,
+        sourceUrl: sourceUrl,
+        savedAt: Date.now(),
+      }, YOUTUBE_LATEST_KEY);
+      tx.oncomplete = function () { db.close(); resolve(); };
+      tx.onerror = function () {
+        var err = tx.error || new Error('could not save local media.');
+        db.close();
+        reject(err);
+      };
+    });
+  });
+}
+
+function getSavedYoutubeTrack() {
+  return openYoutubeDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(YOUTUBE_STORE_NAME, 'readonly');
+      var req = tx.objectStore(YOUTUBE_STORE_NAME).get(YOUTUBE_LATEST_KEY);
+      req.onsuccess = function () {
+        db.close();
+        resolve(req.result || null);
+      };
+      req.onerror = function () {
+        var err = req.error || new Error('could not read local media.');
+        db.close();
+        reject(err);
+      };
+    });
+  });
+}
+
+function filenameFromDisposition(header) {
+  if (!header) return '';
+  var utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8 && utf8[1]) return decodeURIComponent(utf8[1].replace(/^"|"$/g, ''));
+  var plain = header.match(/filename="?([^";]+)"?/i);
+  return plain && plain[1] ? plain[1] : '';
+}
+
+function extensionForType(type) {
+  if (/mpeg|mp3/i.test(type)) return '.mp3';
+  if (/mp4/i.test(type)) return '.mp4';
+  if (/webm/i.test(type)) return '.webm';
+  if (/ogg/i.test(type)) return '.ogg';
+  return '.mp3';
+}
+
+function fileFromDownload(blob, response) {
+  var name = filenameFromDisposition(response.headers.get('content-disposition'));
+  if (!name) name = 'youtube-audio' + extensionForType(blob.type);
+  return new File([blob], name, { type: blob.type || 'audio/mpeg' });
+}
+
+function hasLoadedMobileYoutubeUrl() {
+  var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
+  return !!(sourceUrl && mobileLoadedYoutubeUrl && sourceUrl === mobileLoadedYoutubeUrl && audioEl && audioEl.src);
+}
+
+function updateMobileYoutubeAction() {
+  if (!youtubeDownloadBtn) return;
+  youtubeDownloadBtn.textContent = hasLoadedMobileYoutubeUrl()
+    ? (isPlaying() ? 'pause' : 'play')
+    : 'download';
+}
+
+async function restoreSavedYoutubeTrack() {
+  if (!isMobileViewport()) return;
+  try {
+    var saved = await getSavedYoutubeTrack();
+    if (!saved || !saved.blob) return;
+    var file = new File([saved.blob], saved.name || 'youtube-audio.mp3', {
+      type: saved.type || saved.blob.type || 'audio/mpeg',
+    });
+    if (youtubeUrlInput && saved.sourceUrl) youtubeUrlInput.value = saved.sourceUrl;
+    mobileLoadedYoutubeUrl = saved.sourceUrl || '';
+    load_file(file);
+    updateMobileYoutubeAction();
+    setMobileStatus('saved track ready.', 'ready');
+  } catch (e) {}
+}
+
+window.download_youtube = async function () {
+  var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
+  var apiKey = youtubeApiKeyInput ? youtubeApiKeyInput.value.trim() : '';
+
+  if (hasLoadedMobileYoutubeUrl()) {
+    window.toggle_play();
+    updateMobileYoutubeAction();
+    return;
+  }
+
+  if (!sourceUrl) {
+    setMobileStatus('enter a youtube url.', 'error');
+    return;
+  }
+  if (!apiKey) {
+    setMobileStatus('enter an api key.', 'error');
+    return;
+  }
+
+  writeStoredApiKey(apiKey);
+  if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
+  setMobileStatus('downloading...', '');
+
+  try {
+    var response = await fetch(YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl), {
+      headers: { 'X-API-Key': apiKey },
+    });
+    if (!response.ok) {
+      var message = '';
+      try { message = await response.text(); } catch (e) {}
+      throw new Error(message || ('download failed: ' + response.status));
+    }
+
+    var blob = await response.blob();
+    var file = fileFromDownload(blob, response);
+    await saveYoutubeTrack(file, sourceUrl);
+    mobileLoadedYoutubeUrl = sourceUrl;
+    load_file(file);
+    setMobileStatus('saved locally.', 'ready');
+
+    if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+    try {
+      if (audioEl) await audioEl.play();
+    } catch (e) {}
+  } catch (e) {
+    setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
+  } finally {
+    if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = false;
+  }
+};
+
+if (youtubeApiKeyInput) {
+  youtubeApiKeyInput.value = readStoredApiKey();
+  youtubeApiKeyInput.addEventListener('input', function () {
+    writeStoredApiKey(youtubeApiKeyInput.value.trim());
+  });
+}
+
+if (youtubeUrlInput) {
+  youtubeUrlInput.addEventListener('input', function () {
+    updateMobileYoutubeAction();
   });
 }
 
@@ -901,4 +1107,5 @@ if (eightdPeriodControl) {
 updatePlayIcon();
 updateLiveJumpUI();
 updateSpinDuration();
+restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
