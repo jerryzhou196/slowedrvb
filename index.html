@@ -65,6 +65,7 @@
       --pink: #ff007a;
       --inner: #262626;
       --rotation-duration: 1s;
+      --vinyl-clearance: 90px;
     }
 
     *, *::before, *::after {
@@ -250,10 +251,9 @@
     /* ---- vinyl player (design from slowedrvb.com), 25% larger ---- */
     .vinyl-player {
       position: relative;
-      width: min(100%, 525px);
+      width: min(525px, calc(100% - var(--vinyl-clearance)));
       aspect-ratio: 1 / 1;
-      margin: 0 auto;
-      margin-right: 48px;   /* clear the overhanging tonearm from the controls */
+      margin: 0 var(--vinyl-clearance) 0 auto;   /* clear the overhanging tonearm from the controls */
     }
 
     .disc {
@@ -331,9 +331,10 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      width: 100%;
+      width: calc(100% - var(--vinyl-clearance));
       margin-top: 32px;
-      margin-right: 48px;   /* keep the waveform aligned under the shifted disc */
+      margin-left: auto;
+      margin-right: var(--vinyl-clearance);   /* keep the waveform aligned under the shifted disc */
     }
 
     .play-btn {
@@ -360,18 +361,6 @@
       gap: 8px;
     }
 
-    .refresh-btn {
-      flex: 0 0 auto;
-      height: 36px;
-      border-radius: 18px;
-      padding: 0 14px;
-      font-size: 0.75rem;
-      line-height: 1;
-      white-space: nowrap;
-      background: var(--sub-alt);
-      color: var(--text);
-    }
-
     .wave-wrap {
       flex: 1;
       min-width: 0;
@@ -388,6 +377,19 @@
       border-radius: 6px;
       background: var(--bg);
       cursor: pointer;
+    }
+
+    @media (max-width: 760px) {
+      .vinyl-player {
+        width: min(100%, 525px);
+        margin: 0 auto;
+      }
+
+      .player {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+      }
     }
 
     .slider-section.disabled { opacity: 0.4; }
@@ -485,6 +487,26 @@
 
     .status.streaming { color: var(--main); }
     .status.error { color: var(--error); }
+
+    .jump-live-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      margin: 10px auto 0;
+      border-radius: 6px;
+      padding: 9px 14px;
+      font-size: 0.75rem;
+      line-height: 1;
+      white-space: nowrap;
+      background: var(--sub-alt);
+      color: var(--text);
+    }
+
+    .jump-live-btn:hover {
+      background: var(--text);
+      color: var(--bg);
+    }
   </style>
 </head>
 <body>
@@ -500,11 +522,11 @@
         <div class="player">
           <div class="play-col">
             <button class="play-btn" id="btn-play" onclick="toggle_play()" aria-label="play / pause" disabled></button>
-            <button class="refresh-btn" id="btn-refresh" onclick="refresh_stream()" aria-label="refresh buffer (jump to live)" title="jump to live" hidden>&#8635; refresh buffer</button>
           </div>
           <div class="wave-wrap"><canvas id="buffer-canvas" width="480" height="96"></canvas></div>
         </div>
         <div class="status" id="status">file mode &mdash; choose an mp3 or drag one onto the disc.</div>
+        <button class="jump-live-btn" id="btn-jump-live" onclick="refresh_stream()" aria-label="jump to live stream" hidden>jump to live</button>
       </div>
 
       <div class="controls-col">

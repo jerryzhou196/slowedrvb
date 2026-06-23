@@ -59,8 +59,9 @@ var trackNameEl = document.querySelector('#track-name');
 var playBtn = document.querySelector('#btn-play');
 var btnAdvanced = document.querySelector('#btn-advanced');
 var advanced = document.querySelector('#advanced');
+var streamBtn = document.querySelector('#btn-stream');
 var exportBtn = document.querySelector('#btn-export');
-var refreshBtn = document.querySelector('#btn-refresh');
+var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
 
 function setStatus(text, className) {
@@ -336,7 +337,7 @@ function load_file(file) {
   showTrackName();
   showPlayButton();
   updatePlayIcon();
-  updateRefreshUI();
+  updateLiveJumpUI();
   updateSpinDuration();
   startViz();
   setStatus('loaded — hit play.', '');
@@ -551,12 +552,24 @@ function updateModeUI() {
   showPlayButton();
   updatePlayIcon();
   updateExportUI();
-  updateRefreshUI();
+  updateLiveJumpUI();
 }
 
 // refresh = drop the buffered backlog and snap the read head to the live edge
-function updateRefreshUI() {
-  if (refreshBtn) refreshBtn.hidden = !(appMode === 'stream' && currentAudioTrack);
+function updateLiveJumpUI() {
+  var hasLiveStream = appMode === 'stream' && !!currentAudioTrack;
+  if (jumpLiveBtn) jumpLiveBtn.hidden = !hasLiveStream;
+  if (!streamBtn) return;
+
+  streamBtn.textContent = hasLiveStream ? 'jump to live' : 'stream (tab)';
+  streamBtn.setAttribute('aria-label', hasLiveStream ? 'jump to live stream' : 'stream browser tab');
+  if (hasLiveStream) {
+    streamBtn.title = 'jump to live';
+    streamBtn.onclick = function () { window.refresh_stream(); };
+  } else {
+    streamBtn.removeAttribute('title');
+    streamBtn.onclick = function () { window.stream_tab(); };
+  }
 }
 
 window.refresh_stream = function () {
@@ -886,5 +899,6 @@ if (eightdPeriodControl) {
 
 // ---- init ----
 updatePlayIcon();
+updateLiveJumpUI();
 updateSpinDuration();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
