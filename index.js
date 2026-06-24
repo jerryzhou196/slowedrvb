@@ -707,6 +707,13 @@ async function restoreSavedYoutubeTrack() {
   } catch (e) {}
 }
 
+// iOS only unlocks the AudioContext when resumed inside a user gesture; the gesture
+// is gone by the time an async download finishes, so unlock synchronously on tap.
+function unlockAudio() {
+  ensureAudio();
+  if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+}
+
 // load a track into the player and start it (download, cache hit, or saved-song tap)
 async function loadAndPlay(file, sourceUrl) {
   mobileLoadedYoutubeUrl = sourceUrl || '';
@@ -741,6 +748,7 @@ window.download_youtube = async function () {
     return;
   }
 
+  unlockAudio();  // must run inside this tap, before the async download
   if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
 
   try {
@@ -789,6 +797,7 @@ window.toggle_saved_songs = async function () {
       li.textContent = row.name || row.sourceUrl || 'untitled';
       li.title = row.sourceUrl || '';
       li.addEventListener('click', function () {
+        unlockAudio();  // inside the tap, before async decode
         savedSongsList.hidden = true;
         playSavedTrack(row).then(function () {
           setMobileStatus('loaded from saved.', 'ready');

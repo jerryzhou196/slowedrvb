@@ -203,7 +203,7 @@
     .drag-hint b { color: var(--text); font-weight: 600; }
 
     .mobile-youtube-panel {
-      display: none;
+      display: block;
     }
 
     .mobile-field {
@@ -234,6 +234,20 @@
       background: var(--main);
       color: var(--bg);
     }
+
+    .mobile-btn-row {
+      display: none;   /* saved-songs / choose-mp3 are mobile-only; desktop has its own controls */
+      gap: 10px;
+    }
+
+    .mobile-btn-row button {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* pink, matching the stream button */
+    #btn-saved-songs { background: var(--pink); color: var(--text); }
+    #btn-saved-songs:hover { background: var(--pink); color: var(--text); filter: brightness(1.12); }
 
     .mobile-youtube-status {
       min-height: 1.2em;
@@ -620,8 +634,8 @@
         animation: none;
       }
 
-      .mobile-youtube-panel {
-        display: block;
+      .mobile-btn-row {
+        display: flex;
       }
 
       .slider-section {
@@ -676,8 +690,10 @@
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
           <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
           <button id="btn-youtube-download" onclick="download_youtube()">download</button>
-          <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
-          <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
+          <div class="mobile-btn-row">
+            <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
+            <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
+          </div>
           <ul class="saved-songs-list" id="saved-songs-list" aria-label="saved songs" hidden></ul>
           <div class="mobile-youtube-status" id="mobile-youtube-status" aria-live="polite"></div>
         </div>
