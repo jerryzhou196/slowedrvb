@@ -1416,3 +1416,13 @@ updateSpinDuration();
 if (isMobileViewport()) ensureAudio();
 restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
+
+// one clean posthog event per button press, identity from id/label — covers buttons added later too
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('button');
+  if (!btn || typeof posthog === 'undefined') return;
+  posthog.capture('button_press', {
+    id: btn.id || null,
+    label: (btn.textContent || '').trim().slice(0, 60) || btn.getAttribute('aria-label') || null,
+  });
+});
