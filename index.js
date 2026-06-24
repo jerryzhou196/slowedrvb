@@ -71,12 +71,15 @@ var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
 var youtubeUrlInput = document.querySelector('#youtube-url-input');
 var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
+var mobileMoreOptionsBtn = document.querySelector('#btn-mobile-more-options');
+var mobileMoreOptions = document.querySelector('#mobile-more-options');
 var savedSongsList = document.querySelector('#saved-songs-list');
 var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
 var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
+var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
 var mobileLoadedYoutubeUrl = '';
 
 function setStatus(text, className) {
@@ -730,6 +733,30 @@ function updateMobileYoutubeAction() {
     ? (isPlaying() ? 'pause' : 'play')
     : 'download';
 }
+
+function readMobileMoreOptionsOpen() {
+  try {
+    return localStorage.getItem(MOBILE_MORE_OPTIONS_KEY) === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+function setMobileMoreOptionsOpen(open) {
+  if (mobileMoreOptions) mobileMoreOptions.hidden = !open;
+  if (mobileMoreOptionsBtn) {
+    mobileMoreOptionsBtn.textContent = open ? 'fewer options ▴' : 'more options ▾';
+    mobileMoreOptionsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  if (!open) hideSavedSongs();
+  try {
+    localStorage.setItem(MOBILE_MORE_OPTIONS_KEY, open ? 'true' : 'false');
+  } catch (e) {}
+}
+
+window.toggle_mobile_more_options = function () {
+  setMobileMoreOptionsOpen(!(mobileMoreOptions && !mobileMoreOptions.hidden));
+};
 
 async function restoreSavedYoutubeTrack() {
   if (!isMobileViewport()) return;
@@ -1438,10 +1465,14 @@ setupMediaSession();
 updatePlayIcon();
 updateLiveJumpUI();
 updateSpinDuration();
+setMobileMoreOptionsOpen(readMobileMoreOptionsOpen());
 // Create the AudioContext at page load on mobile. iOS mutes a context first born
 // inside an async callback (e.g. mid-download), so a fresh first download wouldn't
 // play until a reload — building it here mirrors the working post-refresh path.
-if (isMobileViewport()) ensureAudio();
+if (isMobileViewport()) {
+  setStatus('paste a youtube video link.', '');
+  ensureAudio();
+}
 restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
 
