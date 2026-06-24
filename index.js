@@ -1469,7 +1469,10 @@ setMobileMoreOptionsOpen(readMobileMoreOptionsOpen());
 // Create the AudioContext at page load on mobile. iOS mutes a context first born
 // inside an async callback (e.g. mid-download), so a fresh first download wouldn't
 // play until a reload — building it here mirrors the working post-refresh path.
-if (isMobileViewport()) ensureAudio();
+if (isMobileViewport()) {
+  setStatus('paste a youtube video link.', '');
+  ensureAudio();
+}
 restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
 
