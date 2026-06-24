@@ -640,9 +640,21 @@
     }
 
     @media (max-width: 760px) {
+      html {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+
       body {
         align-items: flex-start;
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
         padding: 16px;
+        position: fixed;
+        inset: 0;
+        width: 100%;
       }
 
       .card {
