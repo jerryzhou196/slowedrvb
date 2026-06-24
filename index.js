@@ -1417,12 +1417,35 @@ if (isMobileViewport()) ensureAudio();
 restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
 
+// friendly control name from the id: btn-play -> "play", playback-rate-control -> "playback-rate"
+function controlName(el) {
+  return (el.id || '').replace(/^btn-/, '').replace(/-control$/, '') || null;
+}
+
 // one clean posthog event per button press, identity from id/label — covers buttons added later too
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('button');
   if (!btn || typeof posthog === 'undefined') return;
   posthog.capture('button_press', {
+    control: controlName(btn),   // e.g. "play", "youtube-download", "8d"
     id: btn.id || null,
     label: (btn.textContent || '').trim().slice(0, 60) || btn.getAttribute('aria-label') || null,
   });
+});
+
+// sliders aren't buttons — debounce per control so arrow-key spamming / rapid drags
+// collapse into one event carrying the final value
+var sliderTimers = {};
+document.addEventListener('change', function (e) {
+  var el = e.target;
+  if (!el || el.type !== 'range' || typeof posthog === 'undefined') return;
+  var name = controlName(el) || el.id || 'slider';
+  clearTimeout(sliderTimers[name]);
+  sliderTimers[name] = setTimeout(function () {
+    posthog.capture('slider_change', {
+      control: controlName(el),   // e.g. "playback-rate", "reverb-mix", "bass-boost"
+      id: el.id || null,
+      value: Number(el.value),
+    });
+  }, 400);
 });
