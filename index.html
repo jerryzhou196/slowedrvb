@@ -157,6 +157,7 @@
     .controls {
       display: flex;
       gap: 8px;
+      margin-top: 16px;
       margin-bottom: 8px;
     }
 
@@ -621,7 +622,8 @@
         display: block;
       }
 
-      .vinyl-col,
+      .vinyl-player,
+      .player,
       .controls-col > h1,
       .subtitle,
       .controls,
@@ -631,10 +633,16 @@
         display: none;
       }
 
+      /* keep .vinyl-col for its #status line, but strip its centering and gap */
+      .vinyl-col {
+        display: block;
+      }
+
       .controls-col {
         width: 100%;
       }
 
+      .vinyl-col > *,
       .controls-col > * {
         opacity: 1;
         animation: none;
