@@ -312,6 +312,8 @@ function ensureAudioElement() {
 // ---- build the shared effect chain once ----
 function ensureAudio() {
   if (audioContext) return;
+  // ponytail: iOS 17+ keeps Web Audio alive in background / with phone muted when session is "playback"
+  if (navigator.audioSession) navigator.audioSession.type = 'playback';
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
   bassFilter = audioContext.createBiquadFilter();
