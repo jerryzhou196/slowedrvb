@@ -278,6 +278,18 @@ window.toggle_8d = function () {
   routeOutput();
 };
 
+var btnMoreOptions = document.querySelector('#btn-more-options');
+var chooseBtn = document.querySelector('#btn-choose');
+window.toggle_more_options = function () {
+  if (!streamBtn || !chooseBtn) return;
+  var open = streamBtn.hidden;   // currently hidden => we're opening
+  streamBtn.hidden = chooseBtn.hidden = !open;
+  if (btnMoreOptions) {
+    btnMoreOptions.textContent = open ? 'fewer options ▴' : 'more options ▾';
+    btnMoreOptions.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+};
+
 window.toggle_advanced = function () {
   if (!advanced) return;
   var open = advanced.hidden;

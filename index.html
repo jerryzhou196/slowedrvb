@@ -628,7 +628,8 @@
       .controls-col > h1,
       .subtitle,
       .controls,
-      .drag-hint {
+      .drag-hint,
+      #btn-more-options {
         display: none;
       }
 
@@ -719,9 +720,11 @@
           <button id="btn-clear-songs" onclick="clear_saved_songs()" hidden>clear saved songs</button>
         </div>
 
+        <button class="advanced-toggle" id="btn-more-options" onclick="toggle_more_options()" aria-expanded="false">more options &#9662;</button>
+
         <div class="controls" id="file-controls">
-          <button class="btn-stream" id="btn-stream" onclick="stream_tab()">stream (tab)</button>
-          <button class="btn-choose" id="btn-choose" onclick="choose_file()">choose mp3 file</button>
+          <button class="btn-stream" id="btn-stream" onclick="stream_tab()" hidden>stream (tab)</button>
+          <button class="btn-choose" id="btn-choose" onclick="choose_file()" hidden>choose mp3 file</button>
           <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
           <input type="file" id="file-input" accept="audio/*" hidden>
         </div>
