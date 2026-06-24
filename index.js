@@ -71,7 +71,6 @@ var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
 var youtubeUrlInput = document.querySelector('#youtube-url-input');
 var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
-var youtubeStatusEl = document.querySelector('#mobile-youtube-status');
 var savedSongsList = document.querySelector('#saved-songs-list');
 var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
@@ -86,10 +85,9 @@ function setStatus(text, className) {
   statusEl.className = 'status' + (className ? ' ' + className : '');
 }
 
+// youtube/download messages share the one status line under the waveform
 function setMobileStatus(text, className) {
-  if (!youtubeStatusEl) return;
-  youtubeStatusEl.textContent = text;
-  youtubeStatusEl.className = 'mobile-youtube-status' + (className ? ' ' + className : '');
+  setStatus(text, className);
 }
 
 function currentRate() {
