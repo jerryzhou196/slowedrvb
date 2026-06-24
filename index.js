@@ -73,6 +73,7 @@ var youtubeUrlInput = document.querySelector('#youtube-url-input');
 var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
 var youtubeStatusEl = document.querySelector('#mobile-youtube-status');
 var savedSongsList = document.querySelector('#saved-songs-list');
+var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
 var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
@@ -797,9 +798,14 @@ window.download_youtube = async function () {
   }
 };
 
+function hideSavedSongs() {
+  if (savedSongsList) savedSongsList.hidden = true;
+  if (clearSongsBtn) clearSongsBtn.hidden = true;
+}
+
 window.toggle_saved_songs = async function () {
   if (!savedSongsList) return;
-  if (!savedSongsList.hidden) { savedSongsList.hidden = true; return; }
+  if (!savedSongsList.hidden) { hideSavedSongs(); return; }
   savedSongsList.textContent = '';
   var rows;
   try { rows = await listSavedYoutubeTracks(); } catch (e) { rows = []; }
@@ -814,7 +820,7 @@ window.toggle_saved_songs = async function () {
       li.textContent = row.name || row.sourceUrl || 'untitled';
       li.title = row.sourceUrl || '';
       li.addEventListener('click', function () {
-        savedSongsList.hidden = true;
+        hideSavedSongs();
         loadSavedTrack(row).then(function () {
           setMobileStatus('ready — press play.', 'ready');
         });
@@ -823,12 +829,14 @@ window.toggle_saved_songs = async function () {
     });
   }
   savedSongsList.hidden = false;
+  if (clearSongsBtn) clearSongsBtn.hidden = !rows.length;   // only when there are songs to clear
 };
 
 window.clear_saved_songs = async function () {
   try {
     await clearSavedYoutubeTracks();
-    if (savedSongsList) { savedSongsList.textContent = ''; savedSongsList.hidden = true; }
+    if (savedSongsList) savedSongsList.textContent = '';
+    hideSavedSongs();
     setMobileStatus('cleared saved songs.', 'ready');
   } catch (e) {
     setMobileStatus('could not clear saved songs.', 'error');
