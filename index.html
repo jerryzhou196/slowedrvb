@@ -240,7 +240,17 @@
       gap: 10px;
     }
 
-    #btn-yt-paste { flex: 0 0 10%; padding-left: 0; padding-right: 0; }
+    #btn-yt-paste {
+      flex: 0 0 10%;
+      padding-left: 0;
+      padding-right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--sub-alt);
+      color: var(--sub);
+    }
+    #btn-yt-paste:hover { background: var(--sub-alt); color: var(--text); }
     #btn-youtube-download { flex: 1; }
 
     .mobile-btn-row {
@@ -699,7 +709,12 @@
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
           <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
           <div class="download-row">
-            <button id="btn-yt-paste" onclick="paste_and_download()" title="paste link &amp; download" aria-label="paste link and download">&#128203;</button>
+            <button id="btn-yt-paste" onclick="paste_and_download()" title="paste link &amp; download" aria-label="paste link and download">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="8" y="2" width="8" height="4" rx="1"></rect>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              </svg>
+            </button>
             <button id="btn-youtube-download" onclick="download_youtube()">download</button>
           </div>
           <div class="mobile-btn-row">
