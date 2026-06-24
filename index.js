@@ -280,6 +280,19 @@ window.toggle_8d = function () {
 
 var btnMoreOptions = document.querySelector('#btn-more-options');
 var chooseBtn = document.querySelector('#btn-choose');
+// dj screw: slow pitch + reverb + heavy bass. just drives the existing
+// sliders so all their wiring (audio nodes + labels) runs unchanged.
+function setSlider(el, v) {
+  if (!el) return;
+  el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+window.dj_screw_preset = function () {
+  setSlider(playbackControl, 0.80);  // ponytail: screwed-tape feel; tune to taste
+  setSlider(reverbMixControl, 35);
+  setSlider(bassControl, 6);
+};
+
 window.toggle_more_options = function () {
   if (!streamBtn || !chooseBtn) return;
   var open = streamBtn.hidden;   // currently hidden => we're opening

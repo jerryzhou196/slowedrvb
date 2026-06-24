@@ -313,6 +313,18 @@
     }
     .advanced-toggle:hover { background: var(--sub-alt); color: var(--text); }
 
+    .preset-btn {
+      display: block;
+      width: 100%;
+      margin-bottom: 16px;
+      background: var(--pink);
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+    .preset-btn:hover { background: var(--pink); color: var(--text); filter: brightness(1.12); }
+
     .toggle-row {
       display: flex;
       justify-content: space-between;
@@ -767,6 +779,8 @@
             <span>+15dB</span>
           </div>
         </div>
+
+        <button class="preset-btn" id="btn-dj-screw" onclick="dj_screw_preset()">&#127911; DJ Screw It</button>
 
         <button class="advanced-toggle" id="btn-advanced" onclick="toggle_advanced()" aria-expanded="false">show advanced &#9662;</button>
 
