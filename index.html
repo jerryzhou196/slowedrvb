@@ -196,13 +196,6 @@
     .btn-choose:hover { background: var(--main); color: var(--bg); filter: brightness(1.12); }
     .btn-export { background: var(--sub-alt); color: var(--text); }
 
-    .drag-hint {
-      font-size: 0.6875rem;
-      color: var(--sub);
-      margin: 0 0 16px 2px;
-    }
-    .drag-hint b { color: var(--text); font-weight: 600; }
-
     .mobile-youtube-panel {
       display: block;
     }
@@ -657,6 +650,20 @@
         width: 100%;
       }
 
+      html.mobile-scroll-enabled {
+        height: auto;
+        min-height: 100%;
+        overflow: auto;
+        overscroll-behavior: auto;
+      }
+
+      html.mobile-scroll-enabled body {
+        height: auto;
+        overflow: auto;
+        overscroll-behavior: auto;
+        position: static;
+      }
+
       .card {
         max-width: 440px;
         margin: 0 auto;
@@ -671,7 +678,6 @@
       .controls-col > h1,
       .subtitle,
       .controls,
-      .drag-hint,
       #btn-more-options {
         display: none;
       }
@@ -740,7 +746,7 @@
           </div>
           <div class="wave-wrap"><canvas id="buffer-canvas" width="480" height="96"></canvas></div>
         </div>
-        <div class="status" id="status">file mode &mdash; choose an mp3 or drag one onto the disc.</div>
+        <div class="status" id="status">file mode &mdash; choose an mp3.</div>
         <button class="jump-live-btn" id="btn-jump-live" onclick="refresh_stream()" aria-label="jump to live stream" hidden>jump to live</button>
       </div>
 
@@ -776,8 +782,6 @@
           <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
           <input type="file" id="file-input" accept="audio/*" hidden>
         </div>
-        <p class="drag-hint" id="drag-hint">or drag a file onto the <b>disc</b></p>
-
         <div class="slider-section slider-rate">
           <div class="slider-label">
             <span>playback rate</span>

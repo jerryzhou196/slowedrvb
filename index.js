@@ -307,10 +307,16 @@ window.toggle_more_options = function () {
   }
 };
 
+function setMobileScrollEnabled(enabled) {
+  document.documentElement.classList.toggle('mobile-scroll-enabled', enabled);
+  if (!enabled && isMobileViewport()) window.scrollTo(0, 0);
+}
+
 window.toggle_advanced = function () {
   if (!advanced) return;
   var open = advanced.hidden;
   advanced.hidden = !open;
+  setMobileScrollEnabled(open);
   if (btnAdvanced) {
     btnAdvanced.textContent = open ? 'hide advanced ▴' : 'show advanced ▾';
     btnAdvanced.setAttribute('aria-expanded', open ? 'true' : 'false');
