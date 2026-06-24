@@ -1450,6 +1450,11 @@ function controlName(el) {
   return (el.id || '').replace(/^btn-/, '').replace(/-control$/, '') || null;
 }
 
+function currentSongName() {
+  var name = (appMode === 'stream') ? tabName : fileName;
+  return name ? name.trim().slice(0, 120) : null;
+}
+
 // one clean posthog event per button press, identity from id/label — covers buttons added later too
 document.addEventListener('click', function (e) {
   var btn = e.target.closest('button');
@@ -1458,6 +1463,7 @@ document.addEventListener('click', function (e) {
     control: controlName(btn),   // e.g. "play", "youtube-download", "8d"
     id: btn.id || null,
     label: (btn.textContent || '').trim().slice(0, 60) || btn.getAttribute('aria-label') || null,
+    current_song: currentSongName(),
   });
 });
 
@@ -1474,6 +1480,7 @@ document.addEventListener('change', function (e) {
       control: controlName(el),   // e.g. "playback-rate", "reverb-mix", "bass-boost"
       id: el.id || null,
       value: Number(el.value),
+      current_song: currentSongName(),
     });
   }, 400);
 });
