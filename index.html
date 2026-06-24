@@ -262,6 +262,26 @@
       gap: 10px;
     }
 
+    .mobile-youtube-panel .mobile-options-toggle {
+      display: none;
+      width: auto;
+      margin: 10px auto 0;
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--sub);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .mobile-youtube-panel .mobile-options-toggle:hover {
+      background: var(--sub-alt);
+      color: var(--text);
+    }
+
     .mobile-btn-row button {
       flex: 1;
       min-width: 0;
@@ -659,7 +679,11 @@
         animation: none;
       }
 
-      .mobile-btn-row {
+      .mobile-youtube-panel .mobile-options-toggle {
+        display: block;
+      }
+
+      .mobile-btn-row:not([hidden]) {
         display: flex;
       }
 
@@ -723,7 +747,8 @@
             </button>
             <button id="btn-youtube-download" onclick="download_youtube()">download</button>
           </div>
-          <div class="mobile-btn-row">
+          <button class="mobile-options-toggle" id="btn-mobile-more-options" onclick="toggle_mobile_more_options()" aria-expanded="false" aria-controls="mobile-more-options">more options &#9662;</button>
+          <div class="mobile-btn-row" id="mobile-more-options" hidden>
             <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
             <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
           </div>
