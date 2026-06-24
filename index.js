@@ -707,32 +707,35 @@ async function restoreSavedYoutubeTrack() {
   } catch (e) {}
 }
 
-// iOS only unlocks the AudioContext when resumed inside a user gesture; the gesture
-// is gone by the time an async download finishes, so unlock synchronously on tap.
-function unlockAudio() {
-  ensureAudio();
-  if (audioContext && audioContext.state === 'suspended') audioContext.resume();
-}
-
-// load a track into the player and start it (download, cache hit, or saved-song tap)
-async function loadAndPlay(file, sourceUrl) {
+// Load a track into the player WITHOUT auto-starting it. iOS only unlocks audio
+// inside a real user gesture, and the gesture is gone after an async download —
+// so we prompt the user to press play (which resumes the context within its tap).
+async function loadTrack(file, sourceUrl) {
   mobileLoadedYoutubeUrl = sourceUrl || '';
   if (youtubeUrlInput && sourceUrl) youtubeUrlInput.value = sourceUrl;
   await load_file(file);
-  updateMobileYoutubeAction();
-  if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
-  try {
-    if (useMobileBufferPlayback()) startMobileBufferPlayback(0);
-    else if (audioEl) await audioEl.play();
-  } catch (e) {}
+  updateMobileYoutubeAction();   // download button now reads "play"
 }
 
-function playSavedTrack(saved) {
+function loadSavedTrack(saved) {
   var file = new File([saved.blob], saved.name || 'youtube-audio.mp3', {
     type: saved.type || saved.blob.type || 'audio/mpeg',
   });
-  return loadAndPlay(file, saved.sourceUrl || '');
+  return loadTrack(file, saved.sourceUrl || '');
 }
+
+// paste the copied link into the field and start a download
+window.paste_and_download = async function () {
+  try {
+    var text = await navigator.clipboard.readText();
+    if (text && youtubeUrlInput) youtubeUrlInput.value = text.trim();
+    updateMobileYoutubeAction();
+  } catch (e) {
+    setMobileStatus('clipboard blocked — paste the link manually.', 'error');
+    return;
+  }
+  window.download_youtube();
+};
 
 window.download_youtube = async function () {
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
@@ -748,15 +751,14 @@ window.download_youtube = async function () {
     return;
   }
 
-  unlockAudio();  // must run inside this tap, before the async download
   if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
 
   try {
-    // already downloaded this link? play from local cache, skip the network.
+    // already downloaded this link? load from local cache, skip the network.
     var cached = await getSavedYoutubeTrack(sourceUrl);
     if (cached && cached.blob) {
-      await playSavedTrack(cached);
-      setMobileStatus('loaded from saved.', 'ready');
+      await loadSavedTrack(cached);
+      setMobileStatus('ready — press play.', 'ready');
       return;
     }
 
@@ -771,8 +773,8 @@ window.download_youtube = async function () {
     var blob = await response.blob();
     var file = fileFromDownload(blob, response);
     await saveYoutubeTrack(file, sourceUrl);
-    await loadAndPlay(file, sourceUrl);
-    setMobileStatus('saved locally.', 'ready');
+    await loadTrack(file, sourceUrl);
+    setMobileStatus('saved — press play.', 'ready');
   } catch (e) {
     setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
   } finally {
@@ -797,10 +799,9 @@ window.toggle_saved_songs = async function () {
       li.textContent = row.name || row.sourceUrl || 'untitled';
       li.title = row.sourceUrl || '';
       li.addEventListener('click', function () {
-        unlockAudio();  // inside the tap, before async decode
         savedSongsList.hidden = true;
-        playSavedTrack(row).then(function () {
-          setMobileStatus('loaded from saved.', 'ready');
+        loadSavedTrack(row).then(function () {
+          setMobileStatus('ready — press play.', 'ready');
         });
       });
       savedSongsList.appendChild(li);

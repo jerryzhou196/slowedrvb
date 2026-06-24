@@ -235,6 +235,14 @@
       color: var(--bg);
     }
 
+    .download-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #btn-yt-paste { flex: 0 0 10%; padding-left: 0; padding-right: 0; }
+    #btn-youtube-download { flex: 1; }
+
     .mobile-btn-row {
       display: none;   /* saved-songs / choose-mp3 are mobile-only; desktop has its own controls */
       gap: 10px;
@@ -252,6 +260,7 @@
     .mobile-youtube-status {
       min-height: 1.2em;
       margin-top: 10px;
+      margin-bottom: 16px;
       text-align: center;
       font-size: 0.75rem;
       color: var(--sub);
@@ -689,7 +698,10 @@
 
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
           <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
-          <button id="btn-youtube-download" onclick="download_youtube()">download</button>
+          <div class="download-row">
+            <button id="btn-yt-paste" onclick="paste_and_download()" title="paste link &amp; download" aria-label="paste link and download">&#128203;</button>
+            <button id="btn-youtube-download" onclick="download_youtube()">download</button>
+          </div>
           <div class="mobile-btn-row">
             <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
             <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
