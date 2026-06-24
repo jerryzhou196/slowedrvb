@@ -251,6 +251,35 @@
       color: var(--main);
     }
 
+    .saved-songs-list {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 0;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .saved-songs-list li {
+      margin-top: 8px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--sub-alt);
+      color: var(--text);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .saved-songs-list li:hover { color: var(--main); }
+
+    .saved-songs-list li.empty {
+      color: var(--sub);
+      cursor: default;
+      text-align: center;
+    }
+
     .advanced-toggle {
       width: 100%;
       margin-top: 12px;
@@ -646,8 +675,10 @@
 
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
           <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
-          <input class="mobile-field" id="youtube-api-key-input" type="password" autocomplete="off" placeholder="api key" aria-label="api key">
           <button id="btn-youtube-download" onclick="download_youtube()">download</button>
+          <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
+          <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
+          <ul class="saved-songs-list" id="saved-songs-list" aria-label="saved songs" hidden></ul>
           <div class="mobile-youtube-status" id="mobile-youtube-status" aria-live="polite"></div>
         </div>
 

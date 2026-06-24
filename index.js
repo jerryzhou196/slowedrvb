@@ -70,15 +70,13 @@ var exportBtn = document.querySelector('#btn-export');
 var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
 var youtubeUrlInput = document.querySelector('#youtube-url-input');
-var youtubeApiKeyInput = document.querySelector('#youtube-api-key-input');
 var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
 var youtubeStatusEl = document.querySelector('#mobile-youtube-status');
+var savedSongsList = document.querySelector('#saved-songs-list');
 
 var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
-var YOUTUBE_API_KEY_STORAGE = 'slowedrvb.youtubeApiKey';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
-var YOUTUBE_LATEST_KEY = 'latest';
 var mobileLoadedYoutubeUrl = '';
 
 function setStatus(text, className) {
@@ -582,21 +580,6 @@ function isMobileViewport() {
   return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
 }
 
-function readStoredApiKey() {
-  try {
-    return localStorage.getItem(YOUTUBE_API_KEY_STORAGE) || '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function writeStoredApiKey(value) {
-  try {
-    if (value) localStorage.setItem(YOUTUBE_API_KEY_STORAGE, value);
-    else localStorage.removeItem(YOUTUBE_API_KEY_STORAGE);
-  } catch (e) {}
-}
-
 function openYoutubeDb() {
   return new Promise(function (resolve, reject) {
     if (!window.indexedDB) {
@@ -613,6 +596,7 @@ function openYoutubeDb() {
   });
 }
 
+// keyed by the youtube url so each downloaded song persists and can be looked up by link
 function saveYoutubeTrack(file, sourceUrl) {
   return openYoutubeDb().then(function (db) {
     return new Promise(function (resolve, reject) {
@@ -623,7 +607,7 @@ function saveYoutubeTrack(file, sourceUrl) {
         type: file.type,
         sourceUrl: sourceUrl,
         savedAt: Date.now(),
-      }, YOUTUBE_LATEST_KEY);
+      }, sourceUrl);
       tx.oncomplete = function () { db.close(); resolve(); };
       tx.onerror = function () {
         var err = tx.error || new Error('could not save local media.');
@@ -634,14 +618,35 @@ function saveYoutubeTrack(file, sourceUrl) {
   });
 }
 
-function getSavedYoutubeTrack() {
+function getSavedYoutubeTrack(sourceUrl) {
   return openYoutubeDb().then(function (db) {
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(YOUTUBE_STORE_NAME, 'readonly');
-      var req = tx.objectStore(YOUTUBE_STORE_NAME).get(YOUTUBE_LATEST_KEY);
+      var req = tx.objectStore(YOUTUBE_STORE_NAME).get(sourceUrl);
       req.onsuccess = function () {
         db.close();
         resolve(req.result || null);
+      };
+      req.onerror = function () {
+        var err = req.error || new Error('could not read local media.');
+        db.close();
+        reject(err);
+      };
+    });
+  });
+}
+
+// every saved track, newest first
+function listSavedYoutubeTracks() {
+  return openYoutubeDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(YOUTUBE_STORE_NAME, 'readonly');
+      var req = tx.objectStore(YOUTUBE_STORE_NAME).getAll();
+      req.onsuccess = function () {
+        db.close();
+        var rows = (req.result || []).filter(function (r) { return r && r.blob; });
+        rows.sort(function (a, b) { return (b.savedAt || 0) - (a.savedAt || 0); });
+        resolve(rows);
       };
       req.onerror = function () {
         var err = req.error || new Error('could not read local media.');
@@ -689,7 +694,7 @@ function updateMobileYoutubeAction() {
 async function restoreSavedYoutubeTrack() {
   if (!isMobileViewport()) return;
   try {
-    var saved = await getSavedYoutubeTrack();
+    var saved = (await listSavedYoutubeTracks())[0];
     if (!saved || !saved.blob) return;
     var file = new File([saved.blob], saved.name || 'youtube-audio.mp3', {
       type: saved.type || saved.blob.type || 'audio/mpeg',
@@ -702,9 +707,28 @@ async function restoreSavedYoutubeTrack() {
   } catch (e) {}
 }
 
+// load a track into the player and start it (download, cache hit, or saved-song tap)
+async function loadAndPlay(file, sourceUrl) {
+  mobileLoadedYoutubeUrl = sourceUrl || '';
+  if (youtubeUrlInput && sourceUrl) youtubeUrlInput.value = sourceUrl;
+  await load_file(file);
+  updateMobileYoutubeAction();
+  if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+  try {
+    if (useMobileBufferPlayback()) startMobileBufferPlayback(0);
+    else if (audioEl) await audioEl.play();
+  } catch (e) {}
+}
+
+function playSavedTrack(saved) {
+  var file = new File([saved.blob], saved.name || 'youtube-audio.mp3', {
+    type: saved.type || saved.blob.type || 'audio/mpeg',
+  });
+  return loadAndPlay(file, saved.sourceUrl || '');
+}
+
 window.download_youtube = async function () {
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
-  var apiKey = youtubeApiKeyInput ? youtubeApiKeyInput.value.trim() : '';
 
   if (hasLoadedMobileYoutubeUrl()) {
     window.toggle_play();
@@ -716,19 +740,20 @@ window.download_youtube = async function () {
     setMobileStatus('enter a youtube url.', 'error');
     return;
   }
-  if (!apiKey) {
-    setMobileStatus('enter an api key.', 'error');
-    return;
-  }
 
-  writeStoredApiKey(apiKey);
   if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
-  setMobileStatus('downloading...', '');
 
   try {
-    var response = await fetch(YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl), {
-      headers: { 'X-API-Key': apiKey },
-    });
+    // already downloaded this link? play from local cache, skip the network.
+    var cached = await getSavedYoutubeTrack(sourceUrl);
+    if (cached && cached.blob) {
+      await playSavedTrack(cached);
+      setMobileStatus('loaded from saved.', 'ready');
+      return;
+    }
+
+    setMobileStatus('downloading...', '');
+    var response = await fetch(YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl));
     if (!response.ok) {
       var message = '';
       try { message = await response.text(); } catch (e) {}
@@ -738,15 +763,8 @@ window.download_youtube = async function () {
     var blob = await response.blob();
     var file = fileFromDownload(blob, response);
     await saveYoutubeTrack(file, sourceUrl);
-    mobileLoadedYoutubeUrl = sourceUrl;
-    await load_file(file);
+    await loadAndPlay(file, sourceUrl);
     setMobileStatus('saved locally.', 'ready');
-
-    if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
-    try {
-      if (useMobileBufferPlayback()) startMobileBufferPlayback(0);
-      else if (audioEl) await audioEl.play();
-    } catch (e) {}
   } catch (e) {
     setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
   } finally {
@@ -754,12 +772,33 @@ window.download_youtube = async function () {
   }
 };
 
-if (youtubeApiKeyInput) {
-  youtubeApiKeyInput.value = readStoredApiKey();
-  youtubeApiKeyInput.addEventListener('input', function () {
-    writeStoredApiKey(youtubeApiKeyInput.value.trim());
-  });
-}
+window.toggle_saved_songs = async function () {
+  if (!savedSongsList) return;
+  if (!savedSongsList.hidden) { savedSongsList.hidden = true; return; }
+  savedSongsList.textContent = '';
+  var rows;
+  try { rows = await listSavedYoutubeTracks(); } catch (e) { rows = []; }
+  if (!rows.length) {
+    var empty = document.createElement('li');
+    empty.className = 'empty';
+    empty.textContent = 'no saved songs yet.';
+    savedSongsList.appendChild(empty);
+  } else {
+    rows.forEach(function (row) {
+      var li = document.createElement('li');
+      li.textContent = row.name || row.sourceUrl || 'untitled';
+      li.title = row.sourceUrl || '';
+      li.addEventListener('click', function () {
+        savedSongsList.hidden = true;
+        playSavedTrack(row).then(function () {
+          setMobileStatus('loaded from saved.', 'ready');
+        });
+      });
+      savedSongsList.appendChild(li);
+    });
+  }
+  savedSongsList.hidden = false;
+};
 
 if (youtubeUrlInput) {
   youtubeUrlInput.addEventListener('input', function () {
