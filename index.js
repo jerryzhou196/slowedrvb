@@ -657,6 +657,21 @@ function listSavedYoutubeTracks() {
   });
 }
 
+function clearSavedYoutubeTracks() {
+  return openYoutubeDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(YOUTUBE_STORE_NAME, 'readwrite');
+      tx.objectStore(YOUTUBE_STORE_NAME).clear();
+      tx.oncomplete = function () { db.close(); resolve(); };
+      tx.onerror = function () {
+        var err = tx.error || new Error('could not clear local media.');
+        db.close();
+        reject(err);
+      };
+    });
+  });
+}
+
 function filenameFromDisposition(header) {
   if (!header) return '';
   var utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
@@ -808,6 +823,16 @@ window.toggle_saved_songs = async function () {
     });
   }
   savedSongsList.hidden = false;
+};
+
+window.clear_saved_songs = async function () {
+  try {
+    await clearSavedYoutubeTracks();
+    if (savedSongsList) { savedSongsList.textContent = ''; savedSongsList.hidden = true; }
+    setMobileStatus('cleared saved songs.', 'ready');
+  } catch (e) {
+    setMobileStatus('could not clear saved songs.', 'error');
+  }
 };
 
 if (youtubeUrlInput) {
@@ -1033,7 +1058,9 @@ window.refresh_stream = function () {
 // ponytail: renders + encodes on the main thread; move to a Worker if big files jank the UI.
 
 function updateExportUI() {
-  if (exportBtn) exportBtn.hidden = !(appMode === 'file' && isMp3 && sourceBuffer);
+  // export re-encodes the decoded buffer to mp3, so any loaded file qualifies
+  // (incl. youtube downloads, which aren't always tagged as mp3)
+  if (exportBtn) exportBtn.hidden = !(appMode === 'file' && sourceBuffer);
 }
 
 window.export_mp3 = async function () {
@@ -1352,5 +1379,9 @@ setupMediaSession();
 updatePlayIcon();
 updateLiveJumpUI();
 updateSpinDuration();
+// Create the AudioContext at page load on mobile. iOS mutes a context first born
+// inside an async callback (e.g. mid-download), so a fresh first download wouldn't
+// play until a reload — building it here mirrors the working post-refresh path.
+if (isMobileViewport()) ensureAudio();
 restoreSavedYoutubeTrack();
 startViz();   // perpetual: draws the sample waveform while idle, real data once loaded
