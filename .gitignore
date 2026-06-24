@@ -1,1 +1,6 @@
 .vercel
+node_modules
+.DS_Store
+*.mp3
+download
+prof_teaches.json

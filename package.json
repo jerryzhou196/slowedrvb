@@ -1,0 +1,9 @@
+{
+  "name": "slowedrvb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Slow + reverb any track in the browser",
+  "scripts": {
+    "start": "npx -y serve ."
+  }
+}
