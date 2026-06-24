@@ -284,6 +284,7 @@ window.toggle_more_options = function () {
   if (!streamBtn || !chooseBtn) return;
   var open = streamBtn.hidden;   // currently hidden => we're opening
   streamBtn.hidden = chooseBtn.hidden = !open;
+  updateExportUI();   // export button lives in this group too
   if (btnMoreOptions) {
     btnMoreOptions.textContent = open ? 'fewer options ▴' : 'more options ▾';
     btnMoreOptions.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -1103,7 +1104,9 @@ window.refresh_stream = function () {
 function updateExportUI() {
   // export re-encodes the decoded buffer to mp3, so any loaded file qualifies
   // (incl. youtube downloads, which aren't always tagged as mp3)
-  if (exportBtn) exportBtn.hidden = !(appMode === 'file' && sourceBuffer);
+  // only inside the expanded "more options" group (streamBtn visible == open)
+  var moreOpen = streamBtn && !streamBtn.hidden;
+  if (exportBtn) exportBtn.hidden = !(moreOpen && appMode === 'file' && sourceBuffer);
 }
 
 window.export_mp3 = async function () {
