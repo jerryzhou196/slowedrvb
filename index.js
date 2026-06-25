@@ -961,15 +961,19 @@ window.paste_and_download = async function () {
     setMobileStatus('clipboard blocked — paste the link manually.', 'error');
     return;
   }
-  window.download_youtube();
+  window.download_youtube(true);
 };
 
 function scheduleYoutubePasteDownload() {
   clearTimeout(youtubePasteDownloadTimer);
   youtubePasteDownloadTimer = setTimeout(function () {
     if (!youtubeUrlInput || !youtubeUrlInput.value.trim()) return;
-    if (youtubeDownloadInFlight || hasLoadedMobileYoutubeUrl()) return;
-    window.download_youtube();
+    if (youtubeDownloadInFlight) return;
+    if (hasLoadedMobileYoutubeUrl()) {
+      if (isValidYoutubeUrl(youtubeUrlInput.value.trim())) youtubeUrlInput.blur();
+      return;
+    }
+    window.download_youtube(true);
   }, 0);
 }
 
@@ -995,15 +999,9 @@ async function readBlobWithProgress(response) {
   return new Blob(chunks, { type: response.headers.get('content-type') || '' });
 }
 
-window.download_youtube = async function () {
+window.download_youtube = async function (blurOnValidUrl) {
   if (youtubeDownloadInFlight) return;
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
-
-  if (hasLoadedMobileYoutubeUrl()) {
-    window.toggle_play();
-    updateMobileYoutubeAction();
-    return;
-  }
 
   if (!sourceUrl) {
     setMobileStatus('enter a youtube url.', 'error');
@@ -1012,6 +1010,14 @@ window.download_youtube = async function () {
 
   if (!isValidYoutubeUrl(sourceUrl)) {
     setMobileStatus('enter a valid youtube url.', 'error');
+    return;
+  }
+
+  if (blurOnValidUrl && youtubeUrlInput) youtubeUrlInput.blur();
+
+  if (hasLoadedMobileYoutubeUrl()) {
+    window.toggle_play();
+    updateMobileYoutubeAction();
     return;
   }
 
