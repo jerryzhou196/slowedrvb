@@ -66,6 +66,7 @@ var playBtn = document.querySelector('#btn-play');
 var btnAdvanced = document.querySelector('#btn-advanced');
 var advanced = document.querySelector('#advanced');
 var postPlayAd = document.querySelector('#post-play-ad');
+var postPlayAdRequested = false;
 var streamBtn = document.querySelector('#btn-stream');
 var exportBtn = document.querySelector('#btn-export');
 var jumpLiveBtn = document.querySelector('#btn-jump-live');
@@ -321,6 +322,12 @@ function showPostPlayAd() {
   if (!postPlayAd || appMode !== 'file' || isMobileViewport()) return;
   if (!(sourceBuffer || (audioEl && audioEl.src))) return;
   postPlayAd.hidden = false;
+  if (!postPlayAdRequested) {
+    postPlayAdRequested = true;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {}
+  }
 }
 
 window.toggle_advanced = function () {
