@@ -76,6 +76,7 @@ var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
 var youtubeCancelBtn = document.querySelector('#btn-youtube-cancel');
 var mobileMoreOptionsBtn = document.querySelector('#btn-mobile-more-options');
 var mobileMoreOptions = document.querySelector('#mobile-more-options');
+var mobileChooseMp3 = document.querySelector('#btn-choose-mp3');
 var savedSongsList = document.querySelector('#saved-songs-list');
 var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
@@ -131,19 +132,8 @@ function isValidYoutubeUrl(value) {
   var protocol = url.protocol.toLowerCase();
   if (protocol !== 'http:' && protocol !== 'https:') return false;
 
-  var host = url.hostname.toLowerCase();
-  var isYoutubeHost = host === 'youtube.com' || host.endsWith('.youtube.com') ||
-    host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com');
-  var isShortHost = host === 'youtu.be';
-  if (!isYoutubeHost && !isShortHost) return false;
-
-  var parts = url.pathname.split('/').filter(Boolean);
-  if (isShortHost) return !!parts[0];
-
-  if (url.pathname === '/watch') return !!url.searchParams.get('v');
-  if (url.pathname === '/playlist') return !!url.searchParams.get('list');
-  if (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'live') return !!parts[1];
-  return false;
+  var normalized = value.toLowerCase();
+  return normalized.indexOf('youtube') !== -1 || url.hostname.toLowerCase() === 'youtu.be';
 }
 
 function startYoutubePlaceholderTyping() {
@@ -770,10 +760,22 @@ async function decodeFile(file) {
 
 window.choose_file = function () { if (fileInput) fileInput.click(); };
 
+if (mobileChooseMp3) {
+  mobileChooseMp3.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    window.choose_file();
+  });
+}
+
 if (fileInput) {
   fileInput.addEventListener('change', function () {
     var f = fileInput.files && fileInput.files[0];
-    if (f) load_file(f);
+    if (f) {
+      mobileLoadedYoutubeUrl = '';
+      if (youtubeUrlInput) youtubeUrlInput.value = '';
+      load_file(f).then(updateMobileYoutubeAction);
+    }
   });
 }
 
@@ -895,16 +897,33 @@ function fileFromDownload(blob, response) {
   return new File([blob], name, { type: blob.type || 'audio/mpeg' });
 }
 
+function hasLoadedFileTrack() {
+  return appMode === 'file' && !!(sourceBuffer || (audioEl && audioEl.src));
+}
+
 function hasLoadedMobileYoutubeUrl() {
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
-  return !!(sourceUrl && mobileLoadedYoutubeUrl && sourceUrl === mobileLoadedYoutubeUrl && (sourceBuffer || (audioEl && audioEl.src)));
+  return !!(sourceUrl && mobileLoadedYoutubeUrl && sourceUrl === mobileLoadedYoutubeUrl && hasLoadedFileTrack());
+}
+
+function mobilePrimaryActionPlaysLoadedTrack() {
+  var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
+  return hasLoadedFileTrack() && (!sourceUrl || hasLoadedMobileYoutubeUrl());
 }
 
 function updateMobileYoutubeAction() {
   if (!youtubeDownloadBtn) return;
-  youtubeDownloadBtn.textContent = hasLoadedMobileYoutubeUrl()
+  var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
+  var playsLoadedTrack = mobilePrimaryActionPlaysLoadedTrack();
+  youtubeDownloadBtn.textContent = playsLoadedTrack
     ? (isPlaying() ? 'pause' : 'play')
-    : 'download';
+    : (sourceUrl ? 'download' : 'play');
+  youtubeDownloadBtn.setAttribute(
+    'aria-label',
+    playsLoadedTrack
+      ? (isPlaying() ? 'pause loaded audio' : 'play loaded audio')
+      : (sourceUrl ? 'download youtube audio' : 'play loaded audio')
+  );
 }
 
 function readMobileMoreOptionsOpen() {
@@ -980,14 +999,18 @@ window.paste_and_download = async function () {
 function scheduleYoutubePasteDownload() {
   clearTimeout(youtubePasteDownloadTimer);
   youtubePasteDownloadTimer = setTimeout(function () {
-    if (!youtubeUrlInput || !youtubeUrlInput.value.trim()) return;
-    if (youtubeDownloadInFlight) return;
-    if (hasLoadedMobileYoutubeUrl()) {
-      if (isValidYoutubeUrl(youtubeUrlInput.value.trim())) youtubeUrlInput.blur();
-      return;
-    }
-    window.download_youtube(true);
+    startYoutubeDownloadFromInput(true);
   }, 0);
+}
+
+function startYoutubeDownloadFromInput(blurOnValidUrl) {
+  if (!youtubeUrlInput || !youtubeUrlInput.value.trim()) return;
+  if (youtubeDownloadInFlight) return;
+  if (hasLoadedMobileYoutubeUrl()) {
+    if (blurOnValidUrl && isValidYoutubeUrl(youtubeUrlInput.value.trim())) youtubeUrlInput.blur();
+    return;
+  }
+  window.download_youtube(blurOnValidUrl);
 }
 
 // stream the response so we can show real transfer progress instead of one frozen "downloading…"
@@ -1016,8 +1039,9 @@ window.download_youtube = async function (blurOnValidUrl) {
   if (youtubeDownloadInFlight) return;
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
 
-  if (!sourceUrl) {
-    setMobileStatus('enter a youtube url.', 'error');
+  if (mobilePrimaryActionPlaysLoadedTrack() || !sourceUrl) {
+    window.toggle_play();
+    updateMobileYoutubeAction();
     return;
   }
 
@@ -1028,7 +1052,7 @@ window.download_youtube = async function (blurOnValidUrl) {
 
   if (blurOnValidUrl && youtubeUrlInput) youtubeUrlInput.blur();
 
-  if (hasLoadedMobileYoutubeUrl()) {
+  if (mobilePrimaryActionPlaysLoadedTrack()) {
     window.toggle_play();
     updateMobileYoutubeAction();
     return;
@@ -1142,6 +1166,14 @@ if (youtubeUrlInput) {
   youtubeUrlInput.addEventListener('input', function (e) {
     updateMobileYoutubeAction();
     if (e && e.inputType === 'insertFromPaste') scheduleYoutubePasteDownload();
+  });
+  youtubeUrlInput.addEventListener('blur', function () {
+    startYoutubeDownloadFromInput(false);
+  });
+  youtubeUrlInput.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    startYoutubeDownloadFromInput(true);
   });
 }
 

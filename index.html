@@ -272,12 +272,23 @@
       color: var(--sub);
     }
 
-    .mobile-youtube-panel button {
+    .mobile-youtube-panel button,
+    .mobile-youtube-panel .mobile-file-button {
+      display: block;
       width: 100%;
       margin-top: 10px;
       border-radius: 6px;
+      padding: 11px 14px;
       background: var(--main);
       color: var(--bg);
+      border: none;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      line-height: normal;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
     }
 
     #btn-yt-paste {
@@ -323,9 +334,20 @@
       color: var(--text);
     }
 
-    .mobile-btn-row button {
+    .mobile-btn-row button,
+    .mobile-btn-row .mobile-file-button {
       flex: 1;
       min-width: 0;
+    }
+
+    .file-input-native {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
     }
 
     /* pink, matching the stream button */
@@ -837,11 +859,11 @@
               </svg>
             </button>
           </div>
-          <button id="btn-youtube-download" onclick="download_youtube()">download</button>
+          <button id="btn-youtube-download" onclick="download_youtube()">play</button>
           <button class="mobile-options-toggle" id="btn-mobile-more-options" onclick="toggle_mobile_more_options()" aria-expanded="false" aria-controls="mobile-more-options">more options &#9662;</button>
           <div class="mobile-btn-row" id="mobile-more-options" hidden>
             <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
-            <button id="btn-choose-mp3" onclick="choose_file()">choose mp3</button>
+            <label class="mobile-file-button" id="btn-choose-mp3" for="file-input" role="button" tabindex="0">choose mp3</label>
           </div>
           <ul class="saved-songs-list" id="saved-songs-list" aria-label="saved songs" hidden></ul>
           <button id="btn-clear-songs" onclick="clear_saved_songs()" hidden>clear saved songs</button>
@@ -898,7 +920,6 @@
             <button class="btn-stream" id="btn-stream" onclick="stream_tab()">stream (tab)</button>
             <button class="btn-choose" id="btn-choose" onclick="choose_file()">choose mp3 file</button>
             <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
-            <input type="file" id="file-input" accept="audio/*" hidden>
           </div>
 
           <div class="slider-section">
@@ -951,6 +972,7 @@
     </div>
   </div>
 
+  <input class="file-input-native" type="file" id="file-input" accept="audio/*">
   <script src="index.js"></script>
 </body>
 </html>
