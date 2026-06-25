@@ -80,6 +80,7 @@ var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
+var SAMPLE_YOUTUBE_URL = 'https://www.youtube.com/watch?v=abc123xyz00';
 var mobileLoadedYoutubeUrl = '';
 var youtubePasteDownloadTimer = null;
 var youtubeDownloadInFlight = false;
@@ -93,6 +94,51 @@ function setStatus(text, className) {
 // youtube/download messages share the one status line under the waveform
 function setMobileStatus(text, className) {
   setStatus(text, className);
+}
+
+function startYoutubePlaceholderTyping() {
+  if (!youtubeUrlInput) return;
+  var fallback = 'youtube url';
+  var index = 0;
+  var deleting = false;
+
+  function tick() {
+    if (youtubeUrlInput.value) {
+      youtubeUrlInput.placeholder = fallback;
+    } else {
+      youtubeUrlInput.placeholder = SAMPLE_YOUTUBE_URL.slice(0, index) || fallback;
+      if (deleting) {
+        index--;
+        if (index <= 0) {
+          deleting = false;
+          index = 0;
+          setTimeout(tick, 600);
+          return;
+        }
+      } else {
+        index++;
+        if (index > SAMPLE_YOUTUBE_URL.length) {
+          deleting = true;
+          setTimeout(tick, 1600);
+          return;
+        }
+      }
+    }
+    setTimeout(tick, deleting ? 35 : 55);
+  }
+
+  tick();
+}
+
+function focusYoutubeInputOnDesktop() {
+  if (!youtubeUrlInput || isMobileViewport()) return;
+  requestAnimationFrame(function () {
+    try {
+      youtubeUrlInput.focus({ preventScroll: true });
+    } catch (e) {
+      youtubeUrlInput.focus();
+    }
+  });
 }
 
 function currentRate() {
@@ -283,8 +329,6 @@ window.toggle_8d = function () {
   routeOutput();
 };
 
-var btnMoreOptions = document.querySelector('#btn-more-options');
-var chooseBtn = document.querySelector('#btn-choose');
 // dj screw: slow pitch + reverb + heavy bass. just drives the existing
 // sliders so all their wiring (audio nodes + labels) runs unchanged.
 function setSlider(el, v) {
@@ -296,17 +340,6 @@ window.dj_screw_preset = function () {
   setSlider(playbackControl, 0.80);  // ponytail: screwed-tape feel; tune to taste
   setSlider(reverbMixControl, 35);
   setSlider(bassControl, 6);
-};
-
-window.toggle_more_options = function () {
-  if (!streamBtn || !chooseBtn) return;
-  var open = streamBtn.hidden;   // currently hidden => we're opening
-  streamBtn.hidden = chooseBtn.hidden = !open;
-  updateExportUI();   // export button lives in this group too
-  if (btnMoreOptions) {
-    btnMoreOptions.textContent = open ? 'fewer options ▴' : 'more options ▾';
-    btnMoreOptions.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
 };
 
 window.toggle_advanced = function () {
@@ -519,6 +552,65 @@ function setupMediaSession() {
   setMediaSessionAction('seekto', function (details) {
     if (details && typeof details.seekTime === 'number') seekFileMode(details.seekTime);
   });
+}
+
+function isKeyboardInputTarget(target) {
+  if (!target || target === document.body || target === document.documentElement) return false;
+  var tag = target.tagName ? target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button') return true;
+  if (target.isContentEditable) return true;
+  return !!(target.closest && target.closest('[contenteditable="true"], [role="textbox"], [role="slider"]'));
+}
+
+function seekByKeyboard(seconds) {
+  if (appMode !== 'file' || !fileModeDuration()) return false;
+  seekFileMode(fileModeCurrentTime() + seconds);
+  drawFileWave();
+  return true;
+}
+
+function seekToFileEdge(edge) {
+  var duration = fileModeDuration();
+  if (appMode !== 'file' || !duration) return false;
+  seekFileMode(edge === 'end' ? duration : 0);
+  drawFileWave();
+  return true;
+}
+
+function jumpLiveByKeyboard() {
+  if (appMode !== 'stream' || !circularBuffer) return false;
+  window.refresh_stream();
+  return true;
+}
+
+function handleMediaKeydown(e) {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || isKeyboardInputTarget(e.target)) return;
+
+  var key = e.key || '';
+  var lowerKey = key.length === 1 ? key.toLowerCase() : key;
+  var seekStep = e.shiftKey ? 30 : 10;
+  var handled = false;
+
+  if ((key === ' ' || key === 'Spacebar' || e.code === 'Space' || lowerKey === 'k' || key === 'MediaPlayPause') && !e.repeat) {
+    window.toggle_play();
+    handled = true;
+  } else if (key === 'MediaPlay' && !e.repeat) {
+    if (!isPlaying()) window.toggle_play();
+    handled = true;
+  } else if ((key === 'MediaPause' || key === 'MediaStop') && !e.repeat) {
+    if (isPlaying()) window.toggle_play();
+    handled = true;
+  } else if (key === 'ArrowLeft' || lowerKey === 'j' || key === 'MediaTrackPrevious') {
+    handled = seekByKeyboard(-seekStep);
+  } else if (key === 'ArrowRight' || lowerKey === 'l' || key === 'MediaTrackNext') {
+    handled = seekByKeyboard(seekStep) || (key === 'MediaTrackNext' && jumpLiveByKeyboard());
+  } else if (key === 'Home') {
+    handled = seekToFileEdge('start');
+  } else if (key === 'End') {
+    handled = seekToFileEdge('end') || jumpLiveByKeyboard();
+  }
+
+  if (handled) e.preventDefault();
 }
 
 // ============================ FILE MODE ============================
@@ -1164,9 +1256,7 @@ window.refresh_stream = function () {
 function updateExportUI() {
   // export re-encodes the decoded buffer to mp3, so any loaded file qualifies
   // (incl. youtube downloads, which aren't always tagged as mp3)
-  // only inside the expanded "more options" group (streamBtn visible == open)
-  var moreOpen = streamBtn && !streamBtn.hidden;
-  if (exportBtn) exportBtn.hidden = !(moreOpen && appMode === 'file' && sourceBuffer);
+  if (exportBtn) exportBtn.hidden = !(appMode === 'file' && sourceBuffer);
 }
 
 window.export_mp3 = async function () {
@@ -1482,6 +1572,9 @@ if (eightdPeriodControl) {
 
 // ---- init ----
 setupMediaSession();
+document.addEventListener('keydown', handleMediaKeydown);
+startYoutubePlaceholderTyping();
+focusYoutubeInputOnDesktop();
 updatePlayIcon();
 updateLiveJumpUI();
 updateSpinDuration();

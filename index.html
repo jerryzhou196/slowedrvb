@@ -80,19 +80,19 @@
 
     [hidden] { display: none !important; }
 
-    /* react-fade-in style: direct children fade in, staggered 50ms */
+    /* react-fade-in style: direct children fade in, staggered 25ms */
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .vinyl-col > *, .controls-col > * { opacity: 0; animation: fadeIn 0.4s ease forwards; }
-    .vinyl-col > *:nth-child(1), .controls-col > *:nth-child(1) { animation-delay: 0.05s; }
-    .vinyl-col > *:nth-child(2), .controls-col > *:nth-child(2) { animation-delay: 0.10s; }
-    .vinyl-col > *:nth-child(3), .controls-col > *:nth-child(3) { animation-delay: 0.15s; }
-    .vinyl-col > *:nth-child(4), .controls-col > *:nth-child(4) { animation-delay: 0.20s; }
-    .vinyl-col > *:nth-child(5), .controls-col > *:nth-child(5) { animation-delay: 0.25s; }
-    .vinyl-col > *:nth-child(6), .controls-col > *:nth-child(6) { animation-delay: 0.30s; }
-    .vinyl-col > *:nth-child(7), .controls-col > *:nth-child(7) { animation-delay: 0.35s; }
-    .vinyl-col > *:nth-child(8), .controls-col > *:nth-child(8) { animation-delay: 0.40s; }
-    .vinyl-col > *:nth-child(9), .controls-col > *:nth-child(9) { animation-delay: 0.45s; }
-    .vinyl-col > *:nth-child(10), .controls-col > *:nth-child(10) { animation-delay: 0.50s; }
+    .vinyl-col > *, .controls-col > * { opacity: 0; animation: fadeIn 0.2s ease forwards; }
+    .vinyl-col > *:nth-child(1), .controls-col > *:nth-child(1) { animation-delay: 0.025s; }
+    .vinyl-col > *:nth-child(2), .controls-col > *:nth-child(2) { animation-delay: 0.05s; }
+    .vinyl-col > *:nth-child(3), .controls-col > *:nth-child(3) { animation-delay: 0.075s; }
+    .vinyl-col > *:nth-child(4), .controls-col > *:nth-child(4) { animation-delay: 0.10s; }
+    .vinyl-col > *:nth-child(5), .controls-col > *:nth-child(5) { animation-delay: 0.125s; }
+    .vinyl-col > *:nth-child(6), .controls-col > *:nth-child(6) { animation-delay: 0.15s; }
+    .vinyl-col > *:nth-child(7), .controls-col > *:nth-child(7) { animation-delay: 0.175s; }
+    .vinyl-col > *:nth-child(8), .controls-col > *:nth-child(8) { animation-delay: 0.20s; }
+    .vinyl-col > *:nth-child(9), .controls-col > *:nth-child(9) { animation-delay: 0.225s; }
+    .vinyl-col > *:nth-child(10), .controls-col > *:nth-child(10) { animation-delay: 0.25s; }
     @media (prefers-reduced-motion: reduce) {
       .vinyl-col > *, .controls-col > * { opacity: 1; animation: none; }
     }
@@ -204,10 +204,23 @@
       display: block;
     }
 
+    .mobile-youtube-panel .status {
+      margin-top: 0;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+
+    .youtube-url-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
     .mobile-field {
-      width: 100%;
-      margin-top: 10px;
-      border: 2px solid transparent;
+      flex: 1 1 auto;
+      width: auto;
+      min-width: 0;
+      border: 2px solid rgba(255, 0, 122, 0.6);
       border-radius: 8px;
       padding: 12px 14px;
       font-family: inherit;
@@ -218,7 +231,8 @@
     }
 
     .mobile-field:focus {
-      border-color: var(--main);
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(255, 0, 122, 0.18);
     }
 
     .mobile-field::placeholder {
@@ -233,13 +247,10 @@
       color: var(--bg);
     }
 
-    .download-row {
-      display: flex;
-      gap: 10px;
-    }
-
     #btn-yt-paste {
       flex: 0 0 10%;
+      min-width: 44px;
+      margin-top: 0;
       padding-left: 0;
       padding-right: 0;
       display: flex;
@@ -252,7 +263,7 @@
 
     #btn-clear-songs { background: var(--sub-alt); color: var(--sub); }
     #btn-clear-songs:hover { background: var(--sub-alt); color: var(--error); }
-    #btn-youtube-download { flex: 1; }
+    #btn-youtube-download { display: none; }
 
     .mobile-btn-row {
       display: none;   /* saved-songs / choose-mp3 are mobile-only; desktop has its own controls */
@@ -681,12 +692,11 @@
       .player,
       .controls-col > h1,
       .subtitle,
-      .controls,
-      #btn-more-options {
+      .controls {
         display: none;
       }
 
-      /* keep .vinyl-col for its #status line, but strip its centering and gap */
+      /* keep .vinyl-col lightweight on mobile after hiding the desktop player */
       .vinyl-col {
         display: block;
       }
@@ -702,6 +712,10 @@
       }
 
       .mobile-youtube-panel .mobile-options-toggle {
+        display: block;
+      }
+
+      #btn-youtube-download {
         display: block;
       }
 
@@ -750,25 +764,22 @@
           </div>
           <div class="wave-wrap"><canvas id="buffer-canvas" width="480" height="96"></canvas></div>
         </div>
-        <div class="status" id="status">file mode &mdash; choose an mp3.</div>
         <button class="jump-live-btn" id="btn-jump-live" onclick="refresh_stream()" aria-label="jump to live stream" hidden>jump to live</button>
       </div>
 
       <div class="controls-col">
-        <h1>slow playback audio</h1>
-        <p class="subtitle">slow any track down and drench it in reverb &mdash; upload a file, or hit <b style="color:var(--pink)">stream (tab)</b> to slow a live browser tab.</p>
-
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
-          <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
-          <div class="download-row">
+          <div class="status" id="status">file mode &mdash; choose an mp3.</div>
+          <div class="youtube-url-row">
+            <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
             <button id="btn-yt-paste" onclick="paste_and_download()" title="paste link &amp; download" aria-label="paste link and download">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="8" y="2" width="8" height="4" rx="1"></rect>
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
               </svg>
             </button>
-            <button id="btn-youtube-download" onclick="download_youtube()">download</button>
           </div>
+          <button id="btn-youtube-download" onclick="download_youtube()">download</button>
           <button class="mobile-options-toggle" id="btn-mobile-more-options" onclick="toggle_mobile_more_options()" aria-expanded="false" aria-controls="mobile-more-options">more options &#9662;</button>
           <div class="mobile-btn-row" id="mobile-more-options" hidden>
             <button id="btn-saved-songs" onclick="toggle_saved_songs()">saved songs</button>
@@ -778,14 +789,6 @@
           <button id="btn-clear-songs" onclick="clear_saved_songs()" hidden>clear saved songs</button>
         </div>
 
-        <button class="advanced-toggle" id="btn-more-options" onclick="toggle_more_options()" aria-expanded="false">more options &#9662;</button>
-
-        <div class="controls" id="file-controls">
-          <button class="btn-stream" id="btn-stream" onclick="stream_tab()" hidden>stream (tab)</button>
-          <button class="btn-choose" id="btn-choose" onclick="choose_file()" hidden>choose mp3 file</button>
-          <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
-          <input type="file" id="file-input" accept="audio/*" hidden>
-        </div>
         <div class="slider-section slider-rate">
           <div class="slider-label">
             <span>playback rate</span>
@@ -830,6 +833,13 @@
         <button class="advanced-toggle" id="btn-advanced" onclick="toggle_advanced()" aria-expanded="false">show advanced &#9662;</button>
 
         <div id="advanced" hidden>
+          <div class="controls" id="file-controls">
+            <button class="btn-stream" id="btn-stream" onclick="stream_tab()">stream (tab)</button>
+            <button class="btn-choose" id="btn-choose" onclick="choose_file()">choose mp3 file</button>
+            <button class="btn-export" id="btn-export" onclick="export_mp3()" hidden>export mp3</button>
+            <input type="file" id="file-input" accept="audio/*" hidden>
+          </div>
+
           <div class="slider-section">
             <div class="slider-label">
               <span>reverb decay</span>
