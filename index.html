@@ -636,35 +636,6 @@
       color: var(--bg);
     }
 
-    .post-play-ad {
-      width: min(100%, 420px);
-      margin: 18px auto 0;
-      padding: 16px;
-      border: 1px solid var(--sub-alt);
-      border-radius: 8px;
-      background: var(--sub-alt);
-      color: var(--text);
-      text-align: center;
-    }
-
-    .post-play-ad-label {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--sub);
-      font-size: 0.625rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      line-height: 1;
-      text-transform: uppercase;
-    }
-
-    .post-play-ad-body {
-      color: var(--main);
-      font-size: 0.875rem;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-
     @media (max-width: 760px) {
       html {
         height: 100%;
@@ -711,7 +682,6 @@
       .controls-col > h1,
       .subtitle,
       .controls,
-      .post-play-ad,
       #btn-more-options {
         display: none;
       }
@@ -782,10 +752,6 @@
         </div>
         <div class="status" id="status">file mode &mdash; choose an mp3.</div>
         <button class="jump-live-btn" id="btn-jump-live" onclick="refresh_stream()" aria-label="jump to live stream" hidden>jump to live</button>
-        <aside class="post-play-ad" id="post-play-ad" aria-label="advertisement" hidden>
-          <span class="post-play-ad-label">advertisement</span>
-          <div class="post-play-ad-body">your ad here</div>
-        </aside>
       </div>
 
       <div class="controls-col">

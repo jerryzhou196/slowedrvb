@@ -65,7 +65,6 @@ var trackNameEl = document.querySelector('#track-name');
 var playBtn = document.querySelector('#btn-play');
 var btnAdvanced = document.querySelector('#btn-advanced');
 var advanced = document.querySelector('#advanced');
-var postPlayAd = document.querySelector('#post-play-ad');
 var streamBtn = document.querySelector('#btn-stream');
 var exportBtn = document.querySelector('#btn-export');
 var jumpLiveBtn = document.querySelector('#btn-jump-live');
@@ -313,16 +312,6 @@ function setMobileScrollEnabled(enabled) {
   if (!enabled && isMobileViewport()) window.scrollTo(0, 0);
 }
 
-function hidePostPlayAd() {
-  if (postPlayAd) postPlayAd.hidden = true;
-}
-
-function showPostPlayAd() {
-  if (!postPlayAd || appMode !== 'file' || isMobileViewport()) return;
-  if (!(sourceBuffer || (audioEl && audioEl.src))) return;
-  postPlayAd.hidden = false;
-}
-
 window.toggle_advanced = function () {
   if (!advanced) return;
   var open = advanced.hidden;
@@ -543,7 +532,6 @@ async function load_file(file) {
   appMode = 'file';
   var mobileMode = isMobileViewport();
   filePlaybackEngine = mobileMode ? 'buffer' : 'media';
-  hidePostPlayAd();
 
   ensureAudioElement();
   if (!mediaSource) mediaSource = audioContext.createMediaElementSource(audioEl);  // once per element
@@ -959,16 +947,7 @@ window.toggle_play = function () {
     }
     if (!audioEl || !audioEl.src) { setStatus('choose a file first.', ''); return; }
     if (audioContext && audioContext.state === 'suspended') audioContext.resume();
-    if (audioEl.paused) {
-      var playAttempt = audioEl.play();
-      if (playAttempt && typeof playAttempt.then === 'function') {
-        playAttempt.then(showPostPlayAd).catch(function () {});
-      } else {
-        showPostPlayAd();
-      }
-    } else {
-      audioEl.pause();
-    }
+    if (audioEl.paused) audioEl.play(); else audioEl.pause();
   }
 };
 
@@ -1017,7 +996,6 @@ window.stream_tab = async function () {
   if (audioEl) audioEl.pause();
   if (mediaSource) mediaSource.disconnect();
   stopStreamFully();
-  hidePostPlayAd();
   appMode = 'stream';
   setRateRange(1);
   startCapture(displayStream, audioTracks);
