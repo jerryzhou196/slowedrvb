@@ -53,6 +53,7 @@ var panControl = document.querySelector('#pan-control');
 var panValue = document.querySelector('#pan-value');
 var panSection = document.querySelector('#pan-section');
 var btn8d = document.querySelector('#btn-8d');
+var btn8dFast = document.querySelector('#btn-8d-fast');
 var eightdSpeed = document.querySelector('#eightd-speed');
 var eightdPeriodControl = document.querySelector('#eightd-period-control');
 var eightdPeriodValue = document.querySelector('#eightd-period-value');
@@ -71,6 +72,7 @@ var jumpLiveBtn = document.querySelector('#btn-jump-live');
 var rateTicks = document.querySelector('#rate-ticks');
 var youtubeUrlInput = document.querySelector('#youtube-url-input');
 var youtubeDownloadBtn = document.querySelector('#btn-youtube-download');
+var youtubeCancelBtn = document.querySelector('#btn-youtube-cancel');
 var mobileMoreOptionsBtn = document.querySelector('#btn-mobile-more-options');
 var mobileMoreOptions = document.querySelector('#mobile-more-options');
 var savedSongsList = document.querySelector('#saved-songs-list');
@@ -84,6 +86,8 @@ var SAMPLE_YOUTUBE_URL = 'https://www.youtube.com/watch?v=abc123xyz00';
 var mobileLoadedYoutubeUrl = '';
 var youtubePasteDownloadTimer = null;
 var youtubeDownloadInFlight = false;
+var youtubeDownloadController = null;
+var youtubeDownloadCanceled = false;
 
 function setStatus(text, className) {
   if (!statusEl) return;
@@ -91,9 +95,54 @@ function setStatus(text, className) {
   statusEl.className = 'status' + (className ? ' ' + className : '');
 }
 
+function setYoutubePromptStatus() {
+  if (!statusEl) return;
+  setStatus('paste a youtube URL.', '');
+}
+
 // youtube/download messages share the one status line under the waveform
 function setMobileStatus(text, className) {
   setStatus(text, className);
+}
+
+function setYoutubeFetching(fetching) {
+  youtubeDownloadInFlight = fetching;
+  if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = fetching;
+  if (youtubeUrlInput) youtubeUrlInput.readOnly = fetching;
+  if (youtubeCancelBtn) youtubeCancelBtn.hidden = !fetching;
+}
+
+function throwIfYoutubeCanceled() {
+  if (!youtubeDownloadCanceled) return;
+  var err = new Error('download canceled');
+  err.name = 'AbortError';
+  throw err;
+}
+
+function isValidYoutubeUrl(value) {
+  var url;
+  try {
+    url = new URL(value);
+  } catch (e) {
+    return false;
+  }
+
+  var protocol = url.protocol.toLowerCase();
+  if (protocol !== 'http:' && protocol !== 'https:') return false;
+
+  var host = url.hostname.toLowerCase();
+  var isYoutubeHost = host === 'youtube.com' || host.endsWith('.youtube.com') ||
+    host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com');
+  var isShortHost = host === 'youtu.be';
+  if (!isYoutubeHost && !isShortHost) return false;
+
+  var parts = url.pathname.split('/').filter(Boolean);
+  if (isShortHost) return !!parts[0];
+
+  if (url.pathname === '/watch') return !!url.searchParams.get('v');
+  if (url.pathname === '/playlist') return !!url.searchParams.get('list');
+  if (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'live') return !!parts[1];
+  return false;
 }
 
 function startYoutubePlaceholderTyping() {
@@ -106,16 +155,16 @@ function startYoutubePlaceholderTyping() {
     if (youtubeUrlInput.value) {
       youtubeUrlInput.placeholder = fallback;
     } else {
-      youtubeUrlInput.placeholder = SAMPLE_YOUTUBE_URL.slice(0, index) || fallback;
       if (deleting) {
-        index--;
-        if (index <= 0) {
+        index = Math.max(0, index - 1);
+        youtubeUrlInput.placeholder = SAMPLE_YOUTUBE_URL.slice(0, index);
+        if (index === 0) {
           deleting = false;
-          index = 0;
           setTimeout(tick, 600);
           return;
         }
       } else {
+        youtubeUrlInput.placeholder = SAMPLE_YOUTUBE_URL.slice(0, index);
         index++;
         if (index > SAMPLE_YOUTUBE_URL.length) {
           deleting = true;
@@ -307,6 +356,11 @@ function updateEightDUI() {
     btn8d.classList.toggle('active', eightDEnabled);
     btn8d.setAttribute('aria-pressed', eightDEnabled ? 'true' : 'false');
   }
+  if (btn8dFast) {
+    btn8dFast.textContent = eightDEnabled ? '8D on' : '8D off';
+    btn8dFast.classList.toggle('active', eightDEnabled);
+    btn8dFast.setAttribute('aria-pressed', eightDEnabled ? 'true' : 'false');
+  }
   if (eightdSpeed) eightdSpeed.hidden = !eightDEnabled;
   if (panControl) panControl.disabled = eightDEnabled;
   if (panSection) panSection.classList.toggle('disabled', eightDEnabled);
@@ -340,6 +394,16 @@ window.dj_screw_preset = function () {
   setSlider(playbackControl, 0.80);  // ponytail: screwed-tape feel; tune to taste
   setSlider(reverbMixControl, 35);
   setSlider(bassControl, 6);
+};
+
+window.eightd_fast_preset = function () {
+  if (eightDEnabled) {
+    window.toggle_8d();
+    return;
+  }
+
+  setSlider(eightdPeriodControl, 2);
+  window.toggle_8d();
 };
 
 window.toggle_advanced = function () {
@@ -946,14 +1010,22 @@ window.download_youtube = async function () {
     return;
   }
 
-  youtubeDownloadInFlight = true;
-  if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
+  if (!isValidYoutubeUrl(sourceUrl)) {
+    setMobileStatus('enter a valid youtube url.', 'error');
+    return;
+  }
+
+  setYoutubeFetching(true);
+  youtubeDownloadCanceled = false;
+  youtubeDownloadController = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
   try {
     // already downloaded this link? load from local cache, skip the network.
     var cached = await getSavedYoutubeTrack(sourceUrl);
+    throwIfYoutubeCanceled();
     if (cached && cached.blob) {
       await loadSavedTrack(cached);
+      throwIfYoutubeCanceled();
       setMobileStatus('ready — press play.', 'ready');
       return;
     }
@@ -961,7 +1033,10 @@ window.download_youtube = async function () {
     setMobileStatus('connecting to server…', 'streaming');
     // server runs yt-dlp before sending headers, so this await IS the "fetching" wait
     setMobileStatus('fetching from youtube…', 'streaming');
-    var response = await fetch(YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl));
+    var response = await fetch(
+      YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl),
+      youtubeDownloadController ? { signal: youtubeDownloadController.signal } : undefined
+    );
     if (!response.ok) {
       var message = '';
       try { message = await response.text(); } catch (e) {}
@@ -969,17 +1044,31 @@ window.download_youtube = async function () {
     }
 
     var blob = await readBlobWithProgress(response);
+    throwIfYoutubeCanceled();
     var file = fileFromDownload(blob, response);
     setMobileStatus('saving locally…', 'streaming');
     await saveYoutubeTrack(file, sourceUrl);
+    throwIfYoutubeCanceled();
     await loadTrack(file, sourceUrl);
     setMobileStatus('saved — press play.', 'ready');
   } catch (e) {
-    setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
+    if (youtubeDownloadCanceled || (e && e.name === 'AbortError')) {
+      setMobileStatus('download canceled.', '');
+    } else {
+      setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
+    }
   } finally {
-    youtubeDownloadInFlight = false;
-    if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = false;
+    setYoutubeFetching(false);
+    youtubeDownloadController = null;
+    youtubeDownloadCanceled = false;
   }
+};
+
+window.cancel_youtube_download = function () {
+  if (!youtubeDownloadInFlight) return;
+  youtubeDownloadCanceled = true;
+  if (youtubeDownloadController) youtubeDownloadController.abort();
+  setMobileStatus('canceling download…', '');
 };
 
 function hideSavedSongs() {
@@ -1583,7 +1672,7 @@ setMobileMoreOptionsOpen(readMobileMoreOptionsOpen());
 // inside an async callback (e.g. mid-download), so a fresh first download wouldn't
 // play until a reload — building it here mirrors the working post-refresh path.
 if (isMobileViewport()) {
-  setStatus('paste a youtube video link.', '');
+  setYoutubePromptStatus();
   ensureAudio();
 }
 restoreSavedYoutubeTrack();

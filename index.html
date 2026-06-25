@@ -204,10 +204,38 @@
       display: block;
     }
 
-    .mobile-youtube-panel .status {
-      margin-top: 0;
+    .youtube-status-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
       margin-bottom: 10px;
+    }
+
+    .mobile-youtube-panel .status {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-top: 0;
+      margin-bottom: 0;
       text-align: left;
+    }
+
+    .mobile-youtube-panel .youtube-cancel-btn {
+      flex: 0 0 10%;
+      min-width: 44px;
+      margin-top: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--error);
+      font-size: 0.75rem;
+      line-height: 1;
+    }
+
+    .mobile-youtube-panel .youtube-cancel-btn:hover {
+      background: transparent;
+      color: var(--text);
     }
 
     .youtube-url-row {
@@ -233,6 +261,11 @@
     .mobile-field:focus {
       border-color: var(--pink);
       box-shadow: 0 0 0 3px rgba(255, 0, 122, 0.18);
+    }
+
+    .mobile-field[readonly] {
+      color: var(--sub);
+      cursor: progress;
     }
 
     .mobile-field::placeholder {
@@ -341,17 +374,39 @@
     }
     .advanced-toggle:hover { background: var(--sub-alt); color: var(--text); }
 
-    .preset-btn {
-      display: block;
-      width: 100%;
+    .preset-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
       margin-top: 12px;
       margin-bottom: 16px;
+    }
+
+    .preset-btn {
+      display: block;
+      flex: 1 1 auto;
+      min-width: 0;
+      margin: 0;
       background: var(--sub-alt);
       color: var(--sub);
       letter-spacing: 0.06em;
       font-weight: 600;
     }
     .preset-btn:hover { background: var(--sub-alt); color: var(--sub); filter: brightness(1.3); }
+
+    .preset-btn.active,
+    .preset-btn.active:hover {
+      background: var(--main);
+      color: var(--bg);
+      filter: none;
+    }
+
+    .preset-btn-compact {
+      flex: 0 0 20%;
+      padding-left: 0;
+      padding-right: 0;
+      white-space: nowrap;
+    }
 
     .toggle-row {
       display: flex;
@@ -769,7 +824,10 @@
 
       <div class="controls-col">
         <div class="mobile-youtube-panel" id="mobile-youtube-panel">
-          <div class="status" id="status">file mode &mdash; choose an mp3.</div>
+          <div class="youtube-status-row">
+            <div class="status" id="status">paste a youtube URL.</div>
+            <button class="youtube-cancel-btn" id="btn-youtube-cancel" onclick="cancel_youtube_download()" hidden>cancel</button>
+          </div>
           <div class="youtube-url-row">
             <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
             <button id="btn-yt-paste" onclick="paste_and_download()" title="paste link &amp; download" aria-label="paste link and download">
@@ -828,7 +886,10 @@
           </div>
         </div>
 
-        <button class="preset-btn" id="btn-dj-screw" onclick="dj_screw_preset()">screw and chop</button>
+        <div class="preset-row">
+          <button class="preset-btn" id="btn-dj-screw" onclick="dj_screw_preset()">screw and chop</button>
+          <button class="preset-btn preset-btn-compact" id="btn-8d-fast" onclick="eightd_fast_preset()" aria-pressed="false">8D off</button>
+        </div>
 
         <button class="advanced-toggle" id="btn-advanced" onclick="toggle_advanced()" aria-expanded="false">show advanced &#9662;</button>
 
@@ -853,19 +914,6 @@
             </div>
           </div>
 
-          <div class="slider-section" id="pan-section">
-            <div class="slider-label">
-              <span>3d pan</span>
-              <span class="rate-value"><span id="pan-value">C</span></span>
-            </div>
-            <input type="range" id="pan-control" min="-100" max="100" step="any" value="0">
-            <div class="ticks">
-              <span>left</span>
-              <span>center</span>
-              <span>right</span>
-            </div>
-          </div>
-
           <div class="slider-section">
             <div class="toggle-row">
               <span class="label">8d audio<small>auto-sweep left &harr; right</small></span>
@@ -882,6 +930,19 @@
                 <span>8s</span>
                 <span>20s slow</span>
               </div>
+            </div>
+          </div>
+
+          <div class="slider-section" id="pan-section">
+            <div class="slider-label">
+              <span>3d pan</span>
+              <span class="rate-value"><span id="pan-value">C</span></span>
+            </div>
+            <input type="range" id="pan-control" min="-100" max="100" step="any" value="0">
+            <div class="ticks">
+              <span>left</span>
+              <span>center</span>
+              <span>right</span>
             </div>
           </div>
         </div>
