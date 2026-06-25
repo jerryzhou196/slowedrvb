@@ -5,7 +5,7 @@ var COLOR_ERROR = '#ca4754';
 
 // ---- shared audio graph ----
 var audioContext;
-var bassFilter, convolverNode, dryGain, wetGain, outputBus, pannerNode;
+var bassFilter, convolverNode, dryGain, wetGain, outputBus, volumeGain, pannerNode;
 
 // ---- file mode (default) ----
 var audioEl, mediaSource, filePeaks = null, peaksMax = 0.0001, peaksLive = false;
@@ -61,6 +61,7 @@ var eightdPeriodValue = document.querySelector('#eightd-period-value');
 var statusEl = document.querySelector('#status');
 var bufferCanvas = document.querySelector('#buffer-canvas');
 var bufferCtx = bufferCanvas ? bufferCanvas.getContext('2d') : null;
+var volumeControl = document.querySelector('#volume-control');
 var fileInput = document.querySelector('#file-input');
 var disc = document.querySelector('#disc');
 var trackNameEl = document.querySelector('#track-name');
@@ -303,12 +304,31 @@ function formatPan(p) {
   return (p < 0 ? 'L ' : 'R ') + Math.abs(p);
 }
 
+function currentVolume() {
+  if (!volumeControl) return 1;
+  var parsed = parseInt(volumeControl.value, 10);
+  if (isNaN(parsed)) return 1;
+  return Math.max(0, Math.min(1, parsed / 100));
+}
+
+function applyVolume(volume) {
+  var safeVolume = Math.max(0, Math.min(1, volume));
+  if (volumeGain) volumeGain.gain.value = safeVolume;
+  if (volumeControl) volumeControl.style.setProperty('--volume-progress', (safeVolume * 100) + '%');
+}
+
 // HRTF panner colors the sound even at center, so only route through it when used.
 function routeOutput() {
   if (!outputBus || !audioContext) return;
   var spatial = eightDEnabled || (panControl && parseInt(panControl.value, 10) !== 0);
   outputBus.disconnect();
-  outputBus.connect(spatial ? pannerNode : audioContext.destination);
+  if (!volumeGain) {
+    outputBus.connect(spatial ? pannerNode : audioContext.destination);
+    return;
+  }
+  volumeGain.disconnect();
+  outputBus.connect(volumeGain);
+  volumeGain.connect(spatial ? pannerNode : audioContext.destination);
 }
 
 // ---- 8D sweep ----
@@ -443,6 +463,8 @@ function ensureAudio() {
   dryGain = audioContext.createGain();
   wetGain = audioContext.createGain();
   outputBus = audioContext.createGain();
+  volumeGain = audioContext.createGain();
+  volumeGain.gain.value = currentVolume();
 
   pannerNode = audioContext.createPanner();
   pannerNode.panningModel = 'HRTF';
@@ -466,6 +488,7 @@ function ensureAudio() {
   applyReverbMix((reverbMixControl ? parseInt(reverbMixControl.value, 10) : 0) / 100);
   applyBass(bassControl ? parseFloat(bassControl.value) : 0);
   applyPan(panControl ? parseInt(panControl.value, 10) / 100 : 0);
+  applyVolume(currentVolume());
   routeOutput();
   if (eightDEnabled) start8D();
 }
@@ -1667,6 +1690,13 @@ if (playbackControl) {
     else if (audioEl) audioEl.playbackRate = v;
     updateSpinDuration();
     updateMediaSessionState();
+  });
+}
+
+if (volumeControl) {
+  applyVolume(currentVolume());
+  volumeControl.addEventListener('input', function () {
+    applyVolume(currentVolume());
   });
 }
 
