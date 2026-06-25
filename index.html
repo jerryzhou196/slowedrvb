@@ -658,8 +658,11 @@
       text-transform: uppercase;
     }
 
-    .post-play-ad .adsbygoogle {
-      display: block;
+    .post-play-ad-body {
+      color: var(--main);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.4;
     }
 
     @media (max-width: 760px) {
@@ -781,13 +784,7 @@
         <button class="jump-live-btn" id="btn-jump-live" onclick="refresh_stream()" aria-label="jump to live stream" hidden>jump to live</button>
         <aside class="post-play-ad" id="post-play-ad" aria-label="advertisement" hidden>
           <span class="post-play-ad-label">advertisement</span>
-          <!-- play button ad -->
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-9423980867935201"
-               data-ad-slot="6948813039"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
+          <div class="post-play-ad-body">your ad here</div>
         </aside>
       </div>
 
