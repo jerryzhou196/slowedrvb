@@ -81,6 +81,8 @@ var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
 var mobileLoadedYoutubeUrl = '';
+var youtubePasteDownloadTimer = null;
+var youtubeDownloadInFlight = false;
 
 function setStatus(text, className) {
   if (!statusEl) return;
@@ -311,6 +313,8 @@ window.toggle_advanced = function () {
   if (!advanced) return;
   var open = advanced.hidden;
   advanced.hidden = !open;
+  document.documentElement.classList.toggle('mobile-scroll-open', open);
+  document.body.classList.toggle('mobile-scroll-open', open);
   if (btnAdvanced) {
     btnAdvanced.textContent = open ? 'hide advanced ▴' : 'show advanced ▾';
     btnAdvanced.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -804,6 +808,15 @@ window.paste_and_download = async function () {
   window.download_youtube();
 };
 
+function scheduleYoutubePasteDownload() {
+  clearTimeout(youtubePasteDownloadTimer);
+  youtubePasteDownloadTimer = setTimeout(function () {
+    if (!youtubeUrlInput || !youtubeUrlInput.value.trim()) return;
+    if (youtubeDownloadInFlight || hasLoadedMobileYoutubeUrl()) return;
+    window.download_youtube();
+  }, 0);
+}
+
 // stream the response so we can show real transfer progress instead of one frozen "downloading…"
 async function readBlobWithProgress(response) {
   var total = Number(response.headers.get('content-length')) || 0;
@@ -827,6 +840,7 @@ async function readBlobWithProgress(response) {
 }
 
 window.download_youtube = async function () {
+  if (youtubeDownloadInFlight) return;
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
 
   if (hasLoadedMobileYoutubeUrl()) {
@@ -840,6 +854,7 @@ window.download_youtube = async function () {
     return;
   }
 
+  youtubeDownloadInFlight = true;
   if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = true;
 
   try {
@@ -870,6 +885,7 @@ window.download_youtube = async function () {
   } catch (e) {
     setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
   } finally {
+    youtubeDownloadInFlight = false;
     if (youtubeDownloadBtn) youtubeDownloadBtn.disabled = false;
   }
 };
@@ -920,8 +936,12 @@ window.clear_saved_songs = async function () {
 };
 
 if (youtubeUrlInput) {
-  youtubeUrlInput.addEventListener('input', function () {
+  youtubeUrlInput.addEventListener('paste', function () {
+    scheduleYoutubePasteDownload();
+  });
+  youtubeUrlInput.addEventListener('input', function (e) {
     updateMobileYoutubeAction();
+    if (e && e.inputType === 'insertFromPaste') scheduleYoutubePasteDownload();
   });
 }
 

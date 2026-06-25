@@ -637,14 +637,40 @@
     }
 
     @media (max-width: 760px) {
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+
+      html.mobile-scroll-open,
+      html.mobile-scroll-open body {
+        height: auto;
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+      }
+
       body {
         align-items: flex-start;
+        max-height: 100svh;
+        min-height: 100svh;
         padding: 16px;
+      }
+
+      html.mobile-scroll-open body {
+        max-height: none;
+        -webkit-overflow-scrolling: touch;
       }
 
       .card {
         max-width: 440px;
         margin: 0 auto;
+      }
+
+      html:not(.mobile-scroll-open) .card {
+        height: calc(100svh - 32px);
+        overflow: hidden;
       }
 
       .layout {
