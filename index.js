@@ -18,6 +18,7 @@ var mobileSourceOffset = 0;
 var mobileSourceRate = 1;
 var mobileSourcePlaying = false;
 var filePlaybackEngine = 'media'; // 'media' | 'buffer'
+var autoLoopFilePlayback = true;
 
 // ---- streaming mode ----
 var streamSource, scriptNode, currentAudioTrack;
@@ -428,6 +429,7 @@ function ensureAudioElement() {
   if (audioEl) return;
   audioEl = new Audio();
   audioEl.preload = 'auto';
+  audioEl.loop = autoLoopFilePlayback;
   audioEl.playsInline = true;
   audioEl.setAttribute('playsinline', '');
   configureAudioElementPitch(audioEl);
@@ -482,11 +484,20 @@ function useMobileBufferPlayback() {
   return appMode === 'file' && filePlaybackEngine === 'buffer' && !!sourceBuffer;
 }
 
+function normalizeFileLoopTime(time, duration) {
+  if (!duration) return 0;
+  if (!autoLoopFilePlayback) return Math.max(0, Math.min(duration, time));
+  var wrapped = time % duration;
+  return wrapped < 0 ? wrapped + duration : wrapped;
+}
+
 function mobileBufferCurrentTime() {
   if (!sourceBuffer) return 0;
-  if (!mobileSourcePlaying) return Math.max(0, Math.min(sourceBuffer.duration, mobileSourceOffset));
+  var duration = sourceBuffer.duration || 0;
+  if (!duration) return 0;
+  if (!mobileSourcePlaying) return normalizeFileLoopTime(mobileSourceOffset, duration);
   var elapsed = (audioContext.currentTime - mobileSourceStartedAt) * mobileSourceRate;
-  return Math.max(0, Math.min(sourceBuffer.duration, mobileSourceOffset + elapsed));
+  return normalizeFileLoopTime(mobileSourceOffset + elapsed, duration);
 }
 
 function stopMobileBufferSource(updateOffset) {
@@ -502,15 +513,17 @@ function stopMobileBufferSource(updateOffset) {
 
 function startMobileBufferPlayback(offset) {
   if (!sourceBuffer || !audioContext) return false;
+  var duration = sourceBuffer.duration || 0;
+  if (!duration) return false;
   if (audioContext.state === 'suspended') audioContext.resume();
 
   stopMobileBufferSource(false);
   var startOffset = (typeof offset === 'number') ? offset : (mobileSourceOffset || 0);
-  mobileSourceOffset = Math.max(0, Math.min(sourceBuffer.duration, startOffset));
-  if (mobileSourceOffset >= sourceBuffer.duration) mobileSourceOffset = 0;
+  mobileSourceOffset = normalizeFileLoopTime(startOffset, duration);
 
   var node = audioContext.createBufferSource();
   node.buffer = sourceBuffer;
+  node.loop = autoLoopFilePlayback;
   node.playbackRate.value = currentRate();
   node.connect(bassFilter);
   mobileSourceNode = node;
