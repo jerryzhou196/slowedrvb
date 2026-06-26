@@ -597,12 +597,31 @@
     .volume-strip {
       display: flex;
       align-items: center;
+      justify-content: center;
+      position: relative;
+      gap: 4px;
       width: 54px;
       height: 18px;
+      border-radius: 999px;
+    }
+
+    .volume-strip::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -8px;
+      bottom: -2px;
+      left: -8px;
+      border-radius: 999px;
+      background: var(--sub-alt);
+      pointer-events: none;
     }
 
     .volume-strip input[type="range"] {
-      width: 100%;
+      position: relative;
+      z-index: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       height: 4px;
       border-radius: 999px;
       background: linear-gradient(
@@ -622,6 +641,15 @@
     .volume-strip input[type="range"]::-moz-range-thumb {
       width: 12px;
       height: 12px;
+    }
+
+    .volume-indicator {
+      position: relative;
+      z-index: 1;
+      flex: 0 0 12px;
+      width: 12px;
+      height: 12px;
+      color: var(--sub);
     }
 
     @media (max-width: 760px) {
@@ -869,6 +897,10 @@
           <div class="play-col">
             <button class="play-btn" id="btn-play" onclick="toggle_play()" aria-label="play / pause" disabled></button>
             <div class="volume-strip">
+              <svg class="volume-indicator" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+              </svg>
               <input id="volume-control" type="range" min="0" max="100" value="100" step="1" aria-label="volume">
             </div>
           </div>
