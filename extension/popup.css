@@ -15,6 +15,11 @@
 /* without a dark color-scheme chrome paints the popup frame and scrollbars white */
 :root { color-scheme: dark; }
 
+/* hidden (but laid out, so the popup opens at its final size) until popup.js
+   has painted the tab's real state */
+html.loading main { visibility: hidden; }
+html.no-anim .arm { transition: none; }
+
 html, body {
   margin: 0;
   background: var(--bg);

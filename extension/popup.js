@@ -57,6 +57,10 @@ async function call(next) {
     func: function (s) { return window.__slowedrvb ? window.__slowedrvb(s) : null; },
     args: [next || null]
   });
+  return merge(results);
+}
+
+function merge(results) {
   var frames = results.map(function (r) { return r.result; }).filter(Boolean);
   // prefer the frame that actually holds media (e.g. an embedded player)
   var main = frames.filter(function (f) { return f.mediaCount > 0; })[0] || frames[0];
@@ -113,26 +117,40 @@ $('more').addEventListener('click', function () {
   if (open) extras.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-(async function init() {
-  paint(false);
+// The popup stays hidden (html.loading) until the tab's real state is painted, so
+// it never flashes the neutral defaults; the arm skips its swing on that first paint.
+var revealed = false;
+function reveal() {
+  if (revealed) return;
+  revealed = true;
+  document.documentElement.classList.remove('loading');
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { document.documentElement.classList.remove('no-anim'); });
+  });
+}
+// never leave the popup blank if the page is slow to answer
+setTimeout(function () { if (!revealed) { paint(false); reveal(); } }, 500);
 
+(async function init() {
   if (!hasChrome) {   // opened as a plain page (store screenshots / local preview)
     state = slowedrvbWithDefaults(SLOWEDRVB_PRESETS.slowed);
     paint(true);
+    reveal();
     return;
   }
 
   var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   tabId = tabs[0] && tabs[0].id;
   try {
-    await chrome.scripting.executeScript({
+    // injecting returns content.js's last expression: each frame's current state
+    var info = merge(await chrome.scripting.executeScript({
       target: { tabId: tabId, allFrames: true },
       files: ['settings.js', 'content.js']
-    });
-    var info = await call(null);
+    }));
     if (info.state) state = slowedrvbWithDefaults(info.state);
     paint(info.playing);
     showStatus(info);
+    reveal();
     // keep the record in sync with play/pause while the popup is open
     setInterval(async function () {
       try {
@@ -142,8 +160,10 @@ $('more').addEventListener('click', function () {
       } catch (e) {}
     }, 1000);
   } catch (e) {
+    paint(false);
     controls.classList.add('disabled');
     $('presets').classList.add('disabled');
     statusEl.textContent = "chrome doesn't allow extensions on this page";
+    reveal();
   }
 })();

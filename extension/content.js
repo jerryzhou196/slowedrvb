@@ -240,3 +240,7 @@
     };
   };
 })();
+
+// last expression = what executeScript hands back to the popup, so it can paint
+// the tab's real state from the injection call itself (no second round trip)
+window.__slowedrvb(null);
