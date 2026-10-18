@@ -45,6 +45,7 @@ function paint(playing) {
 function showStatus(info) {
   if (!info.mediaCount) statusEl.textContent = 'no audio or video found on this page yet';
   else if (info.suspended) statusEl.textContent = 'click anywhere on the page once to let the effects through';
+  else if (info.claimed) statusEl.textContent = 'another audio extension (or an older copy of this one) holds this tab\'s audio. turn it off, then reload the page';
   else if (info.speedOnly) statusEl.textContent = 'speed works here; reverb & bass are blocked by this site';
   else statusEl.textContent = '';
 }
@@ -64,6 +65,7 @@ async function call(next) {
     mediaCount: frames.reduce(function (n, f) { return n + f.mediaCount; }, 0),
     playing: frames.some(function (f) { return f.playing; }),
     speedOnly: frames.reduce(function (n, f) { return n + f.speedOnly; }, 0),
+    claimed: frames.reduce(function (n, f) { return n + (f.claimed || 0); }, 0),
     suspended: frames.some(function (f) { return f.suspended; })
   };
 }

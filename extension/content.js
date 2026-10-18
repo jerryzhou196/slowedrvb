@@ -10,6 +10,7 @@
   var media = new Set();             // every element we've touched
   var routed = new WeakMap();        // element -> MediaElementAudioSourceNode
   var speedOnly = new WeakSet();     // cross-origin media Web Audio would silence
+  var claimed = new WeakSet();       // already wired into another Web Audio graph
   var rated = new WeakSet();         // elements whose speed we've changed
 
   var ctx = null;
@@ -183,8 +184,12 @@
       node.connect(input);
       routed.set(el, node);
       speedOnly.delete(el);
+      claimed.delete(el);
     } catch (e) {
-      speedOnly.add(el);   // already owned by the page's own audio graph
+      // an element can only ever feed one MediaElementSourceNode per page load. If
+      // another extension (or a copy of this one from before it was reloaded) got
+      // there first, only a page reload frees it.
+      claimed.add(el);
     }
   }
 
@@ -230,6 +235,7 @@
       mediaCount: list.length,
       playing: list.some(function (el) { return !el.paused && !el.ended; }),
       speedOnly: list.filter(function (el) { return speedOnly.has(el); }).length,
+      claimed: list.filter(function (el) { return claimed.has(el); }).length,
       suspended: !!(ctx && ctx.state !== 'running' && needsFx())
     };
   };
