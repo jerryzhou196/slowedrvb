@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #232326; }
+  body { width: 1280px; height: 800px; display: flex; align-items: center; justify-content: center; gap: 96px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace; }
+  .copy { width: 380px; color: #d9d8d2; }
+  .copy h1 { color: #e8b130; font-size: 34px; line-height: 1.2; margin: 0 0 18px; }
+  .copy h1::before { content: '> '; color: #8a8a90; }
+  .copy p { color: #8a8a90; font-size: 16px; line-height: 1.6; margin: 0; }
+  .copy p b { color: #ff2a6d; font-weight: 600; }
+  iframe { width: 300px; height: 500px; border: 0; border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.5); background: #2b2b2e; }
+  body.tile { width: 440px; height: 280px; background: #2b2b2e; flex-direction: column; gap: 14px; }
+  body.tile img { width: 120px; height: 120px; }
+  body.tile h1 { color: #e8b130; font-size: 26px; margin: 0; }
+  body.tile p { color: #8a8a90; font-size: 14px; margin: 0; }
+</style></head>
+<body>
+  <div class="copy">
+    <h1>slowed + reverb any tab</h1>
+    <p>youtube, soundcloud, anything with audio. drag the rate down, turn the reverb up — <b>the pitch drops like a real record</b>. bass boost and 8d audio too.</p>
+  </div>
+  <iframe src="../extension/popup.html"></iframe>
+  <script>
+    if (location.hash === '#tile') {
+      document.body.className = 'tile';
+      document.body.innerHTML = '<img src="../extension/icons/icon128.png" alt=""><h1>&gt; slowedrvb</h1><p>slowed + reverb any tab</p>';
+    }
+  </script>
+</body></html>
