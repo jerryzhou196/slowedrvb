@@ -85,6 +85,9 @@ var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
 var SAMPLE_YOUTUBE_URL = 'https://www.youtube.com/watch?v=abc123xyz00';
+// set to the chrome web store listing once it's approved; the banner stays hidden until then
+var CHROME_EXTENSION_URL = '';
+var EXTENSION_BANNER_DISMISSED_KEY = 'slowedrvb.extensionBannerDismissed';
 var mobileLoadedYoutubeUrl = '';
 var youtubePasteDownloadTimer = null;
 var youtubeDownloadInFlight = false;
@@ -1749,3 +1752,32 @@ document.addEventListener('change', function (e) {
     });
   }, 400);
 });
+
+// ============================ EXTENSION BANNER ============================
+// points desktop chromium users (chrome, edge, brave, arc) at the chrome extension
+
+function canInstallChromeExtension() {
+  var brands = (navigator.userAgentData && navigator.userAgentData.brands) || [];
+  var chromium = brands.some(function (b) { return /chromium|google chrome/i.test(b.brand); });
+  var mobile = navigator.userAgentData ? navigator.userAgentData.mobile : /Mobi|Android/i.test(navigator.userAgent);
+  return chromium && !mobile;
+}
+
+(function setupExtensionBanner() {
+  var banner = document.querySelector('#extension-banner');
+  if (!banner || !CHROME_EXTENSION_URL || !canInstallChromeExtension()) return;
+  try { if (localStorage.getItem(EXTENSION_BANNER_DISMISSED_KEY) === 'true') return; } catch (e) {}
+
+  var cta = document.querySelector('#extension-banner-cta');
+  cta.href = CHROME_EXTENSION_URL;
+  cta.addEventListener('click', function () {
+    if (typeof posthog !== 'undefined') posthog.capture('extension_banner_click');
+  });
+  document.querySelector('#extension-banner-close').addEventListener('click', function () {
+    banner.hidden = true;
+    document.body.classList.remove('has-extension-banner');
+    try { localStorage.setItem(EXTENSION_BANNER_DISMISSED_KEY, 'true'); } catch (e) {}
+  });
+  banner.hidden = false;
+  document.body.classList.add('has-extension-banner');
+})();
