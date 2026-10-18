@@ -14,7 +14,7 @@ Everything the store asks for is in this repo:
 
 1. Go to `chrome://extensions` and turn on **Developer mode** (top right).
 2. Click **Load unpacked** and pick the `extension/` folder.
-3. Open a YouTube video, click the slowedrvb toolbar icon, then press **slow + reverb this tab**.
+3. Open a YouTube video, click the slowedrvb toolbar icon, then press the **slowed + reverb** preset.
 
 ## 1. Register as a Chrome Web Store developer (one time)
 
@@ -46,7 +46,7 @@ In the developer console, click **New item** and upload `slowedrvb-extension.zip
   > • 8D audio (auto-sweep left ↔ right) and 3D pan
   > • works on YouTube, SoundCloud and most sites with an audio or video player
   >
-  > Click the icon on a tab, press "slow + reverb this tab", and move the sliders. Settings are remembered. Reload the page to turn it off.
+  > Click the icon on a tab, hit the "slowed + reverb" preset or move the sliders. "reset" turns it off.
   >
   > Everything runs locally in your browser. No accounts, no tracking.
 
@@ -64,8 +64,7 @@ In the developer console, click **New item** and upload `slowedrvb-extension.zip
 - **Permission justifications:**
   - `activeTab`: "Gives temporary access to the tab the user opens the popup on, so the effects only apply to that tab."
   - `scripting`: "Injects the audio-effects script into the current tab when the user opens the popup."
-  - `storage`: "Remembers the user's slider settings (speed, reverb, bass, etc.) between uses."
-- **Remote code:** No, I am not using remote code. (The popup loads a font from Google Fonts. That is a stylesheet, not code.)
+- **Remote code:** No, I am not using remote code.
 - **Data usage:** leave every data type unchecked, then tick all three certifications (no selling, no unrelated use, no creditworthiness use).
 - **Privacy policy URL:** `https://slowedrvb.com/privacy.html`
 
@@ -77,7 +76,7 @@ In the developer console, click **New item** and upload `slowedrvb-extension.zip
 
 ## 4. Submit for review
 
-Click **Submit for review**. With only `activeTab` and no broad host permissions, reviews usually finish within a few days. You'll get an email when it's live.
+Click **Submit for review**. With only `activeTab` + `scripting` and no host permissions, reviews usually finish within a few days. You'll get an email when it's live.
 
 ## 5. Point the site banner at the listing
 

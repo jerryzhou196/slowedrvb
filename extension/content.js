@@ -1,20 +1,25 @@
 // Injected into every frame of the active tab by the popup (activeTab + scripting).
 // Routes the page's <audio>/<video> elements through the same effect chain as
 // slowedrvb.com: rate (pitch drops) → bass low-shelf → dry/wet reverb → volume → pan/8D.
-// The popup talks to this file through window.__slowedrvb (see popup.js).
+// The popup reads and updates this frame's state through window.__slowedrvb(next).
 (function () {
   if (window.__slowedrvb) return;   // the popup re-injects on every open
 
-  var settings = slowedrvbWithDefaults(null);
-  var enabled = false;
+  var state = slowedrvbWithDefaults(null);
 
   var media = new Set();             // every element we've touched
   var routed = new WeakMap();        // element -> MediaElementAudioSourceNode
   var speedOnly = new WeakSet();     // cross-origin media Web Audio would silence
+  var rated = new WeakSet();         // elements whose speed we've changed
 
   var ctx = null;
   var input, bassFilter, convolverNode, dryGain, wetGain, outputBus, volumeGain, pannerNode;
   var lfoOsc = null, lfoGain = null;
+
+  // only build the Web Audio graph once an effect beyond speed is in use
+  function needsFx() {
+    return state.reverbMix > 0 || state.bass > 0 || state.eightD || state.pan !== 0 || state.volume !== 100;
+  }
 
   // ---- reverb impulse (decaying stereo noise, same shape as the site) ----
   function generateImpulseResponse(duration, decay) {
@@ -31,11 +36,11 @@
 
   var decayTimer = null, builtDecay = null;
   function scheduleImpulse() {
-    if (!ctx || builtDecay === settings.reverbDecay) return;
+    if (!ctx || builtDecay === state.reverbDecay) return;
     clearTimeout(decayTimer);
     decayTimer = setTimeout(function () {
-      builtDecay = settings.reverbDecay;
-      var buf = generateImpulseResponse(settings.reverbDecay, 2.5);
+      builtDecay = state.reverbDecay;
+      var buf = generateImpulseResponse(state.reverbDecay, 2.5);
       // duck the wet path across the swap so the tail doesn't click
       var now = ctx.currentTime;
       wetGain.gain.cancelScheduledValues(now);
@@ -104,7 +109,7 @@
   function start8D() {
     stop8D();
     lfoOsc = ctx.createOscillator();
-    lfoOsc.frequency.value = 1 / settings.eightDPeriod;
+    lfoOsc.frequency.value = 1 / state.eightDPeriod;
     lfoGain = ctx.createGain();
     lfoGain.gain.value = 1;
     pannerNode.positionX.value = 0;
@@ -120,24 +125,23 @@
     if (lfoGain) { lfoGain.disconnect(); lfoGain = null; }
   }
 
-  // push the current settings into the graph; disabled = transparent passthrough
+  // push the current state into the graph; neutral state = transparent passthrough
   function applyGraph() {
     if (!ctx) return;
-    var mix = enabled ? settings.reverbMix / 100 : 0;
+    var mix = state.reverbMix / 100;
     setParam(dryGain.gain, 1 - mix);
     setParam(wetGain.gain, mix);
-    setParam(bassFilter.gain, enabled ? settings.bass : 0);
-    setParam(volumeGain.gain, enabled ? settings.volume / 100 : 1);
+    setParam(bassFilter.gain, state.bass);
+    setParam(volumeGain.gain, state.volume / 100);
 
-    var eightD = enabled && settings.eightD;
-    if (eightD) {
+    if (state.eightD) {
       if (!lfoOsc) start8D();
-      else lfoOsc.frequency.setTargetAtTime(1 / settings.eightDPeriod, ctx.currentTime, 0.05);
+      else lfoOsc.frequency.setTargetAtTime(1 / state.eightDPeriod, ctx.currentTime, 0.05);
     } else {
       stop8D();
-      applyPan(settings.pan / 100);
+      applyPan(state.pan / 100);
     }
-    routeOutput(eightD || (enabled && settings.pan !== 0));
+    routeOutput(state.eightD || state.pan !== 0);
   }
 
   // ---- media elements ----
@@ -149,19 +153,27 @@
     try { return new URL(src, location.href).origin === location.origin; } catch (e) { return false; }
   }
 
-  function configurePitch(el, preserve) {
+  function setPitchPreserved(el, preserve) {
     try { el.preservesPitch = preserve; } catch (e) {}
     try { el.webkitPreservesPitch = preserve; } catch (e) {}
   }
 
+  // at 1× leave the site's own speed control alone, unless we changed it before
   function applyRate(el) {
-    var target = enabled ? settings.rate : 1;
-    configurePitch(el, !enabled);
-    if (Math.abs(el.playbackRate - target) > 0.001) el.playbackRate = target;
+    if (state.rate === 1) {
+      if (!rated.has(el)) return;
+      rated.delete(el);
+      setPitchPreserved(el, true);
+      el.playbackRate = 1;
+      return;
+    }
+    rated.add(el);
+    setPitchPreserved(el, false);
+    if (Math.abs(el.playbackRate - state.rate) > 0.001) el.playbackRate = state.rate;
   }
 
   function tryRoute(el) {
-    if (routed.has(el) || !enabled) return;
+    if (routed.has(el) || !needsFx()) return;
     if (!isSameOriginMedia(el)) { speedOnly.add(el); return; }
     ensureGraph();
     // a suspended context would silence the element, so wait for one that runs
@@ -180,7 +192,7 @@
     if (!media.has(el)) {
       media.add(el);
       // sites like youtube reset the rate on every new video; keep ours applied
-      el.addEventListener('ratechange', function () { if (enabled) applyRate(el); });
+      el.addEventListener('ratechange', function () { applyRate(el); });
       el.addEventListener('loadedmetadata', function () { applyRate(el); tryRoute(el); });
     }
     applyRate(el);
@@ -203,51 +215,22 @@
     }, true);
   });
 
-  new MutationObserver(function () { if (enabled) scan(); })
-    .observe(document.documentElement || document, { childList: true, subtree: true });
+  new MutationObserver(scan).observe(document.documentElement || document, { childList: true, subtree: true });
 
-  function update() {
-    scan();
-    media.forEach(applyRate);
-    applyGraph();
-  }
-
-  chrome.storage.onChanged.addListener(function (changes, area) {
-    if (area !== 'local' || !changes.settings) return;
-    settings = slowedrvbWithDefaults(changes.settings.newValue);
-    scheduleImpulse();
-    update();
-  });
-
-  chrome.storage.local.get('settings').then(function (got) {
-    settings = slowedrvbWithDefaults(got.settings);
-    scheduleImpulse();
-    update();
-  });
-
-  window.__slowedrvb = {
-    setEnabled: function (on) {
-      enabled = !!on;
-      update();
-      return this.state();
-    },
-    togglePlay: function () {
-      var list = Array.from(media).filter(function (el) { return el.isConnected; });
-      var playing = list.filter(function (el) { return !el.paused; });
-      if (playing.length) playing.forEach(function (el) { el.pause(); });
-      else if (list[0]) list[0].play().catch(function () {});
-      return this.state();
-    },
-    state: function () {
-      scan();
-      var list = Array.from(media).filter(function (el) { return el.isConnected; });
-      return {
-        enabled: enabled,
-        mediaCount: list.length,
-        playing: list.some(function (el) { return !el.paused && !el.ended; }),
-        speedOnly: list.filter(function (el) { return speedOnly.has(el); }).length,
-        suspended: !!(enabled && ctx && ctx.state !== 'running')
-      };
+  window.__slowedrvb = function (next) {
+    if (next) {
+      state = slowedrvbWithDefaults(Object.assign({}, state, next));
+      scheduleImpulse();
+      applyGraph();
     }
+    scan();
+    var list = Array.from(media).filter(function (el) { return el.isConnected; });
+    return {
+      state: state,
+      mediaCount: list.length,
+      playing: list.some(function (el) { return !el.paused && !el.ended; }),
+      speedOnly: list.filter(function (el) { return speedOnly.has(el); }).length,
+      suspended: !!(ctx && ctx.state !== 'running' && needsFx())
+    };
   };
 })();

@@ -1,7 +1,8 @@
-// shared by the popup, content script, offscreen engine and service worker
-var SLOWEDRVB_DEFAULTS = {
-  rate: 0.85,          // playback rate (pitch drops with speed, like a slowed record)
-  reverbMix: 35,       // 0-100 % wet
+// shared by the popup and the content script. State is per tab and lives in the
+// tab's content script, so a fresh tab always starts neutral (= off).
+var SLOWEDRVB_NEUTRAL = {
+  rate: 1,             // playback rate (pitch drops with speed, like a record)
+  reverbMix: 0,        // 0-100 % wet
   reverbDecay: 3.0,    // seconds
   bass: 0,             // dB low-shelf boost
   eightD: false,       // auto-sweep left <-> right
@@ -10,13 +11,17 @@ var SLOWEDRVB_DEFAULTS = {
   volume: 100          // 0-100 %
 };
 
-var SLOWEDRVB_RATE_MIN = 0.5;
-var SLOWEDRVB_RATE_MAX = 1.5;
+// presets only touch the main three; "reset" also clears the extras
+var SLOWEDRVB_PRESETS = {
+  slowed: { rate: 0.85, reverbMix: 40, bass: 3 },
+  spedup: { rate: 1.25, reverbMix: 0, bass: 0 },
+  reset: SLOWEDRVB_NEUTRAL
+};
 
-function slowedrvbWithDefaults(stored) {
+function slowedrvbWithDefaults(partial) {
   var out = {};
-  for (var k in SLOWEDRVB_DEFAULTS) {
-    out[k] = (stored && stored[k] !== undefined) ? stored[k] : SLOWEDRVB_DEFAULTS[k];
+  for (var k in SLOWEDRVB_NEUTRAL) {
+    out[k] = (partial && partial[k] !== undefined) ? partial[k] : SLOWEDRVB_NEUTRAL[k];
   }
   return out;
 }

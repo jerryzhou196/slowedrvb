@@ -1,109 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>slowedrvb</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <title>slowed + reverb</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="layout">
-    <div class="vinyl-col">
-      <h1>slowedrvb</h1>
-      <div class="vinyl-player">
-        <div class="disc" id="disc">
-          <div class="inner-disc"><span class="disc-label" id="track-name"></span></div>
+  <main>
+    <section class="deck" aria-hidden="true">
+      <div class="record" id="record"><div class="label"></div></div>
+      <div class="arm" id="arm"><span class="pivot"></span><span class="rod"></span><span class="head"></span></div>
+    </section>
+
+    <section class="controls" id="controls">
+      <div class="ctl">
+        <div class="row">
+          <label for="rate">speed</label>
+          <output id="rateOut" for="rate">1.00×</output>
         </div>
-        <img class="stick" src="stick.svg" alt="">
+        <input id="rate" type="range" min="0.5" max="1.5" step="0.01" value="1">
       </div>
-      <div class="power-row">
-        <button class="play-btn" id="btn-play" aria-label="play / pause" disabled></button>
-        <button class="btn-power" id="btn-power" aria-pressed="false" disabled>slow + reverb this tab</button>
-      </div>
-      <div class="status" id="status">loading…</div>
-    </div>
-
-    <div class="controls-col" id="controls">
-      <div class="slider-section">
-        <div class="slider-label">
-          <span>playback rate</span>
-          <span class="rate-value"><span id="rate-value">1.00</span><span class="rate-suffix">&times;</span></span>
+      <div class="ctl">
+        <div class="row">
+          <label for="reverbMix">reverb</label>
+          <output id="reverbMixOut" for="reverbMix">0%</output>
         </div>
-        <input type="range" id="rate" min="0.5" max="1.5" step="any">
-        <div class="ticks"><span>0.5&times;</span><span>1&times;</span><span>1.5&times;</span></div>
+        <input id="reverbMix" type="range" min="0" max="100" step="1" value="0">
       </div>
-
-      <div class="slider-section">
-        <div class="slider-label">
-          <span>reverb mix</span>
-          <span class="rate-value"><span id="reverbMix-value">0</span><span class="rate-suffix">%</span></span>
+      <div class="ctl">
+        <div class="row">
+          <label for="bass">bass</label>
+          <output id="bassOut" for="bass">+0.0 dB</output>
         </div>
-        <input type="range" id="reverbMix" min="0" max="100" step="any">
-        <div class="ticks"><span>dry</span><span>50%</span><span>wet</span></div>
+        <input id="bass" type="range" min="0" max="15" step="0.5" value="0">
       </div>
 
-      <div class="slider-section">
-        <div class="slider-label">
-          <span>bass boost</span>
-          <span class="rate-value">+<span id="bass-value">0.0</span><span class="rate-suffix">dB</span></span>
-        </div>
-        <input type="range" id="bass" min="0" max="15" step="any">
-        <div class="ticks"><span>flat</span><span>+7.5dB</span><span>+15dB</span></div>
+      <div class="presets">
+        <button type="button" data-preset="slowed">slowed + reverb</button>
+        <button type="button" data-preset="spedup">sped up</button>
+        <button type="button" data-preset="reset">reset</button>
       </div>
 
-      <button class="advanced-toggle" id="btn-advanced" aria-expanded="false">show advanced &#9662;</button>
+      <button type="button" class="more" id="more" aria-expanded="false" aria-controls="extras">more ▾</button>
 
-      <div id="advanced" hidden>
-        <div class="slider-section">
-          <div class="slider-label">
-            <span>reverb decay</span>
-            <span class="rate-value"><span id="reverbDecay-value">3.0</span><span class="rate-suffix">s</span></span>
+      <div class="extras" id="extras" hidden>
+        <div class="ctl">
+          <div class="row">
+            <label for="reverbDecay">decay</label>
+            <output id="reverbDecayOut" for="reverbDecay">3.0 s</output>
           </div>
-          <input type="range" id="reverbDecay" min="0.5" max="8" step="any">
-          <div class="ticks"><span>0.5s</span><span>4s</span><span>8s</span></div>
+          <input id="reverbDecay" type="range" min="0.5" max="8" step="0.1" value="3">
         </div>
-
-        <div class="slider-section">
-          <div class="toggle-row">
-            <span class="label">8d audio<small>auto-sweep left &harr; right</small></span>
-            <button class="toggle" id="btn-8d" aria-pressed="false">off</button>
+        <div class="ctl">
+          <div class="row">
+            <label for="eightD">8d audio</label>
+            <button type="button" class="switch" id="eightD" role="switch" aria-checked="false">off</button>
           </div>
-          <div class="eightd-speed" id="eightd-speed" hidden>
-            <div class="slider-label">
-              <span>orbit speed</span>
-              <span class="rate-value"><span id="eightDPeriod-value">8.0</span><span class="rate-suffix">s</span></span>
+          <div id="orbit" hidden>
+            <div class="row">
+              <label for="eightDPeriod">orbit</label>
+              <output id="eightDPeriodOut" for="eightDPeriod">8.0 s</output>
             </div>
-            <input type="range" id="eightDPeriod" min="2" max="20" step="any">
-            <div class="ticks"><span>2s fast</span><span>8s</span><span>20s slow</span></div>
+            <input id="eightDPeriod" type="range" min="2" max="20" step="0.5" value="8">
           </div>
         </div>
-
-        <div class="slider-section" id="pan-section">
-          <div class="slider-label">
-            <span>3d pan</span>
-            <span class="rate-value"><span id="pan-value">C</span></span>
+        <div class="ctl" id="panCtl">
+          <div class="row">
+            <label for="pan">pan</label>
+            <output id="panOut" for="pan">C</output>
           </div>
-          <input type="range" id="pan" min="-100" max="100" step="any">
-          <div class="ticks"><span>left</span><span>center</span><span>right</span></div>
+          <input id="pan" type="range" min="-100" max="100" step="1" value="0">
         </div>
-
-        <div class="slider-section">
-          <div class="slider-label">
-            <span>volume</span>
-            <span class="rate-value"><span id="volume-value">100</span><span class="rate-suffix">%</span></span>
+        <div class="ctl">
+          <div class="row">
+            <label for="volume">volume</label>
+            <output id="volumeOut" for="volume">100%</output>
           </div>
-          <input type="range" id="volume" min="0" max="100" step="any">
-          <div class="ticks"><span>0%</span><span>50%</span><span>100%</span></div>
+          <input id="volume" type="range" min="0" max="100" step="1" value="100">
         </div>
-
-        <button class="reset-btn" id="btn-reset">reset to defaults</button>
       </div>
+    </section>
 
-      <a class="site-link" href="https://slowedrvb.com/" target="_blank" rel="noopener">mp3 export + youtube downloads at slowedrvb.com &rarr;</a>
-    </div>
-  </div>
+    <p class="status" id="status" role="status"></p>
+  </main>
   <script src="settings.js"></script>
   <script src="popup.js"></script>
 </body>
