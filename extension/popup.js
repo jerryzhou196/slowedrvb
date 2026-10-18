@@ -143,6 +143,7 @@ $('more').addEventListener('click', function () {
     }, 1000);
   } catch (e) {
     controls.classList.add('disabled');
+    $('presets').classList.add('disabled');
     statusEl.textContent = "chrome doesn't allow extensions on this page";
   }
 })();

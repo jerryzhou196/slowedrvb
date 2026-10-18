@@ -7,6 +7,12 @@
 </head>
 <body>
   <main>
+    <div class="presets" id="presets">
+      <button type="button" data-preset="slowed">slowed + reverb</button>
+      <button type="button" data-preset="spedup">sped up</button>
+      <button type="button" data-preset="reset">reset</button>
+    </div>
+
     <section class="deck" aria-hidden="true">
       <div class="record" id="record"><div class="label"></div></div>
       <div class="arm" id="arm"><span class="pivot"></span><span class="rod"></span><span class="head"></span></div>
@@ -33,12 +39,6 @@
           <output id="bassOut" for="bass">+0.0 dB</output>
         </div>
         <input id="bass" type="range" min="0" max="15" step="0.5" value="0">
-      </div>
-
-      <div class="presets">
-        <button type="button" data-preset="slowed">slowed + reverb</button>
-        <button type="button" data-preset="spedup">sped up</button>
-        <button type="button" data-preset="reset">reset</button>
       </div>
 
       <button type="button" class="more" id="more" aria-expanded="false" aria-controls="extras">more ▾</button>

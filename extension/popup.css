@@ -163,8 +163,8 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
 .presets {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
 }
+.presets.disabled { opacity: .35; pointer-events: none; }
 .presets button {
   flex: 1 1 auto;
   min-height: 32px;
