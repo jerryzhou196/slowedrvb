@@ -12,7 +12,7 @@ started loading the popup:
 | Mark | Meaning |
 | --- | --- |
 | `trace.js start` | first byte of popup JS ran, so Chrome has started the popup document |
-| `settings.js start` | `popup.css` and the HTML above the scripts are loaded |
+| `settings.js start` | the HTML (with its inlined CSS) above the scripts is loaded |
 | `popup.js start` / `popup.js setup done` | the main script loaded and wired up |
 | `tabs.query start` → `done` | asking Chrome which tab is active |
 | `inject start` → `inject + state returned` | `content.js` ran in every frame of the tab |
@@ -88,7 +88,7 @@ it, and prints per-phase percentiles from the same traces. Use `--out` to save t
 Under load, nearly all the time goes to *loading the popup's own HTML, CSS and JS*, before any of
 our logic runs. During that time the document is still `hidden`. That matches Chrome running the
 not-yet-shown popup at background priority, which a busy machine starves. Each file
-(`popup.css`, `settings.js`, `trace.js`, `popup.js`) is a separate load the popup has to wait for.
+(`settings.js`, `trace.js`, `popup.js`; the CSS is inlined) is a separate load the popup has to wait for.
 Ideas to test next with this setup:
 
 - Inline the CSS and JS so the popup is one file.

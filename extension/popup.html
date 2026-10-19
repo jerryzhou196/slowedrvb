@@ -4,7 +4,260 @@
   <meta charset="utf-8">
   <title>slowed + reverb</title>
   <script src="trace.js"></script>
-  <link rel="stylesheet" href="popup.css">
+  <!-- inlined: one less file for chrome to fetch before the popup can paint -->
+  <style>
+:root {
+  --bg: #2b2b2e;
+  --panel: #232326;
+  --track: #3b3b40;
+  --text: #d9d8d2;
+  --muted: #8a8a90;
+  --accent: #e8b130;
+  --arm: #ff2a6d;
+  --vinyl: #c9c7bb;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* without a dark color-scheme chrome paints the popup frame and scrollbars white */
+:root { color-scheme: dark; }
+
+/* hidden (but laid out, so the popup opens at its final size) until popup.js
+   has painted the tab's real state */
+html.loading main { visibility: hidden; }
+html.no-anim .arm { transition: none; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 var(--mono);
+}
+
+main {
+  width: 300px;
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ---------- turntable ---------- */
+.deck {
+  position: relative;
+  height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.record {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg,
+      #d4d2c6, #b9b7ab 12%, #d4d2c6 25%, #bdbbaf 37%,
+      #d4d2c6 50%, #b9b7ab 62%, #d4d2c6 75%, #bdbbaf 87%, #d4d2c6);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  display: grid;
+  place-items: center;
+  animation: spin 1.8s linear infinite;
+  animation-play-state: paused;
+}
+.record.playing { animation-play-state: running; }
+
+.label {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid #111;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.arm {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  margin-left: 80px;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  transform: rotate(var(--arm-rot, 8deg));
+  transition: transform .5s cubic-bezier(.3, .7, .3, 1);
+}
+.arm .pivot {
+  position: absolute;
+  left: -7px; top: 6px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #e2e2e2;
+}
+.arm .rod {
+  position: absolute;
+  left: -2px; top: 0;
+  width: 4px; height: 100px;
+  background: var(--arm);
+  border-radius: 2px;
+}
+.arm .head {
+  position: absolute;
+  left: -6px; top: 92px;
+  width: 12px; height: 22px;
+  background: #b0124a;
+  border-radius: 2px;
+}
+
+/* ---------- controls ---------- */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.controls.disabled { opacity: .35; pointer-events: none; }
+
+.ctl {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 10px 12px 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+label {
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+output {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  margin: 2px 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--track) var(--fill, 0%));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 0;
+}
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(232, 177, 48, .35);
+}
+
+.presets {
+  display: flex;
+  gap: 6px;
+}
+.presets.disabled { opacity: .35; pointer-events: none; }
+.presets button {
+  flex: 1 1 auto;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid #3b3b40;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.presets button:hover { border-color: var(--accent); color: var(--accent); }
+.presets button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.status {
+  margin: 0;
+  min-height: 1.4em;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ---------- extras (slowedrvb.com's advanced controls, same components) ---------- */
+.more {
+  align-self: center;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+.more:hover { color: var(--accent); }
+.more:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.extras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.extras[hidden] { display: none; }
+
+.ctl.disabled { opacity: .35; }
+.ctl.disabled input[type="range"] { pointer-events: none; }
+
+#orbit { margin-top: 8px; }
+
+/* chrome caps popups at 600px tall, so the open extras scroll */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--track); border-radius: 3px; }
+
+.switch {
+  min-width: 44px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid #3b3b40;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.switch:hover { border-color: var(--accent); color: var(--accent); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch[aria-checked="true"] { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .record { animation: none; }
+  .arm { transition: none; }
+}
+  </style>
 </head>
 <body>
   <main>

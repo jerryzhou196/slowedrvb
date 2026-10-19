@@ -39,7 +39,7 @@
   };
 
   // where the document's own loading time went: the navigation itself and each file
-  // (popup.css, settings.js, popup.js…), as start → end ms
+  // (settings.js, popup.js…), as start → end ms
   function collectLoading() {
     try {
       var nav = performance.getEntriesByType('navigation')[0];

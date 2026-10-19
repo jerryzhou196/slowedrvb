@@ -15,11 +15,29 @@ function mark(name, data, opts) {
 }
 mark('popup.js start');
 
+// Finding the tab and injecting into it is the slowest step, so start it before
+// any other setup; init() picks up the result once the UI is wired.
+var hasChrome = typeof chrome !== 'undefined' && chrome.tabs && chrome.scripting;
+var tabReady = hasChrome ? (async function () {
+  mark('tabs.query start');
+  var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  var tab = tabs[0];
+  mark('tabs.query done', { tab: tab && tab.id });
+  mark('inject start');
+  // injecting returns content.js's last expression: each frame's current state
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id, allFrames: true },
+    files: ['settings.js', 'content.js']
+  });
+  return { tab: tab, results: results };
+})() : null;
+// rejections are handled in init(); don't let one surface as unhandled meanwhile
+if (tabReady) tabReady.catch(function () {});
+
 var $ = function (id) { return document.getElementById(id); };
 var record = $('record'), arm = $('arm'), statusEl = $('status'), controls = $('controls');
 var eightDBtn = $('eightD');
 
-var hasChrome = typeof chrome !== 'undefined' && chrome.tabs && chrome.scripting;
 var tabId = null;
 var state = slowedrvbWithDefaults(null);
 
@@ -174,21 +192,14 @@ mark('popup.js setup done');
     return;
   }
 
-  mark('tabs.query start');
-  var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  tabId = tabs[0] && tabs[0].id;
-  var origin = tabs[0] && tabs[0].url ? tabs[0].url.split('/').slice(0, 3).join('/') : '(no url access)';
-  trace.fact('origin', origin);
-  trace.fact('tabStatus', tabs[0] && tabs[0].status);   // 'loading' tabs can be slow to inject
-  trace.fact('tabAudible', !!(tabs[0] && tabs[0].audible));
-  mark('tabs.query done', { tab: tabId, origin: origin });
   try {
-    // injecting returns content.js's last expression: each frame's current state
-    mark('inject start');
-    var results = await chrome.scripting.executeScript({
-      target: { tabId: tabId, allFrames: true },
-      files: ['settings.js', 'content.js']
-    });
+    var got = await tabReady;
+    var tab = got.tab, results = got.results;
+    tabId = tab.id;
+    var origin = tab.url ? tab.url.split('/').slice(0, 3).join('/') : '(no url access)';
+    trace.fact('origin', origin);
+    trace.fact('tabStatus', tab.status);   // 'loading' tabs can be slow to inject
+    trace.fact('tabAudible', !!tab.audible);
     var info = merge(results);
     // how each frame spent its time (measured inside the page by content.js)
     var frames = results.map(function (r) {

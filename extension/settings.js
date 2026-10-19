@@ -26,6 +26,6 @@ function slowedrvbWithDefaults(partial) {
   return out;
 }
 
-// popup open tracing (see trace.js): when this file ran, i.e. popup.css and the
+// popup open tracing (see trace.js): when this file ran, i.e. the inlined css and the
 // html above it were loaded. Content scripts load this file too; they have no tracer.
 if (typeof window !== 'undefined' && window.slowedrvbTrace) window.slowedrvbTrace.mark('settings.js start');
