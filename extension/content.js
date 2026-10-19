@@ -2,6 +2,12 @@
 // Routes the page's <audio>/<video> elements through the same effect chain as
 // slowedrvb.com: rate (pitch drops) → bass low-shelf → dry/wet reverb → volume → pan/8D.
 // The popup reads and updates this frame's state through window.__slowedrvb(next).
+
+// timing for the popup's trace: how long this injection took inside the page, and
+// whether the frame already had the engine from an earlier popup open
+var __slowedrvbInjectT0 = performance.now();
+var __slowedrvbFresh = !window.__slowedrvb;
+
 (function () {
   if (window.__slowedrvb) return;   // the popup re-injects on every open
 
@@ -243,4 +249,10 @@
 
 // last expression = what executeScript hands back to the popup, so it can paint
 // the tab's real state from the injection call itself (no second round trip)
-window.__slowedrvb(null);
+Object.assign(window.__slowedrvb(null), {
+  perf: {
+    fresh: __slowedrvbFresh,
+    scriptMs: Math.round((performance.now() - __slowedrvbInjectT0) * 10) / 10,
+    sinceFrameLoadMs: Math.round(performance.now())
+  }
+});

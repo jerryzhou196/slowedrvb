@@ -2,24 +2,18 @@
 // and reads/updates that tab's state through window.__slowedrvb. State is per tab,
 // so a fresh tab starts neutral and "reset" turns everything off.
 
-// ---- first-paint benchmarking: open the popup, right-click → Inspect, read the console ----
-// Times are ms since the popup document started loading (performance.now()). Each step is
-// also a performance.mark, so it shows up in DevTools' Performance panel.
+// ---- open-latency tracing ----
+// Every step of opening the popup is recorded by trace.js (ms since the popup document
+// started loading) and kept across opens; see debug.html (Shift+D in the popup).
+// DEBUG also echoes each step to the console and adds performance.marks for DevTools.
 var DEBUG = true;
-var timings = {};
-function mark(name, detail) {
-  timings[name] = Math.round(performance.now() * 10) / 10;
+var trace = window.slowedrvbTrace;
+function mark(name, data, opts) {
+  var t = trace.mark(name, data, opts);
   try { performance.mark('slowedrvb:' + name); } catch (e) {}
-  if (DEBUG) console.log('[slowedrvb] ' + timings[name].toFixed(1) + 'ms ' + name + (detail ? ' — ' + detail : ''));
+  if (DEBUG) console.log('[slowedrvb] ' + t.toFixed(1) + 'ms ' + name + (data !== undefined ? ' — ' + JSON.stringify(data) : ''));
 }
-mark('script start');
-
-if (DEBUG && typeof PerformanceObserver !== 'undefined') {
-  // first-paint = the dark background; first-contentful-paint = first visible text/graphics
-  new PerformanceObserver(function (list) {
-    list.getEntries().forEach(function (e) { timings[e.name] = Math.round(e.startTime * 10) / 10; console.log('[slowedrvb] ' + e.startTime.toFixed(1) + 'ms ' + e.name + ' (browser)'); });
-  }).observe({ type: 'paint', buffered: true });
-}
+mark('popup.js start');
 
 var $ = function (id) { return document.getElementById(id); };
 var record = $('record'), arm = $('arm'), statusEl = $('status'), controls = $('controls');
@@ -143,21 +137,34 @@ function reveal(reason) {
   if (revealed) return;
   revealed = true;
   document.documentElement.classList.remove('loading');
+  trace.fact('revealReason', reason);
   mark('revealed', reason);
   requestAnimationFrame(function () {
+    mark('rAF after reveal');
     // the frame after this rAF is the first one on screen with the real state
     requestAnimationFrame(function () {
       document.documentElement.classList.remove('no-anim');
-      mark('first real paint');
-      if (DEBUG) {
-        // let the paint observer catch up, then print the whole timeline at once
-        setTimeout(function () { console.table(timings); }, 0);
-      }
+      mark('first real paint', undefined, { save: true });
+      if (DEBUG) setTimeout(function () { console.table(trace.trace.marks); }, 0);
     });
   });
 }
-// never leave the popup blank if the page is slow to answer
-setTimeout(function () { if (!revealed) { paint(false); reveal('fallback: tab took >500ms'); } }, 500);
+// never leave the popup blank if the page is slow to answer. Always record when the
+// timer actually fired: firing well after 500ms means Chrome was throttling the popup.
+var FALLBACK_MS = 500;
+setTimeout(function () {
+  mark('fallback timer fired', { lateByMs: Math.round(trace.now() - FALLBACK_MS) });
+  if (!revealed) { paint(false); reveal('fallback: tab took >' + FALLBACK_MS + 'ms'); }
+}, FALLBACK_MS);
+
+// Shift+D: open the trace viewer
+document.addEventListener('keydown', function (e) {
+  if (e.shiftKey && (e.key === 'D' || e.key === 'd') && hasChrome) {
+    chrome.tabs.create({ url: chrome.runtime.getURL('debug.html') });
+  }
+});
+
+mark('popup.js setup done');
 
 (async function init() {
   if (!hasChrome) {   // opened as a plain page (store screenshots / local preview)
@@ -167,17 +174,31 @@ setTimeout(function () { if (!revealed) { paint(false); reveal('fallback: tab to
     return;
   }
 
+  mark('tabs.query start');
   var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   tabId = tabs[0] && tabs[0].id;
-  mark('tabs.query done', 'tab ' + tabId + ' ' + (tabs[0] && tabs[0].url ? tabs[0].url.split('/').slice(0, 3).join('/') : '(no url access)'));
+  var origin = tabs[0] && tabs[0].url ? tabs[0].url.split('/').slice(0, 3).join('/') : '(no url access)';
+  trace.fact('origin', origin);
+  trace.fact('tabStatus', tabs[0] && tabs[0].status);   // 'loading' tabs can be slow to inject
+  trace.fact('tabAudible', !!(tabs[0] && tabs[0].audible));
+  mark('tabs.query done', { tab: tabId, origin: origin });
   try {
     // injecting returns content.js's last expression: each frame's current state
+    mark('inject start');
     var results = await chrome.scripting.executeScript({
       target: { tabId: tabId, allFrames: true },
       files: ['settings.js', 'content.js']
     });
     var info = merge(results);
-    mark('inject + state returned', results.length + ' frame(s), ' + info.mediaCount + ' media, rate ' + (info.state ? info.state.rate : '?'));
+    // how each frame spent its time (measured inside the page by content.js)
+    var frames = results.map(function (r) {
+      var p = r.result && r.result.perf;
+      return p ? { frame: r.frameId, fresh: p.fresh, scriptMs: p.scriptMs, sinceFrameLoadMs: p.sinceFrameLoadMs, mediaCount: r.result.mediaCount } : { frame: r.frameId, noResult: true };
+    });
+    trace.fact('frames', frames);
+    trace.fact('mediaCount', info.mediaCount);
+    trace.fact('reinjected', frames.some(function (f) { return f.fresh === false; }));
+    mark('inject + state returned', { frames: results.length, media: info.mediaCount, rate: info.state ? info.state.rate : null });
     if (info.state) state = slowedrvbWithDefaults(info.state);
     paint(info.playing);
     showStatus(info);
@@ -192,7 +213,8 @@ setTimeout(function () { if (!revealed) { paint(false); reveal('fallback: tab to
       } catch (e) {}
     }, 1000);
   } catch (e) {
-    mark('inject failed', e && e.message);
+    trace.fact('injectError', e && e.message);
+    mark('inject failed', e && e.message, { save: true });
     paint(false);
     controls.classList.add('disabled');
     $('presets').classList.add('disabled');
