@@ -1,0 +1,11 @@
+{
+  "name": "slowedrvb-popup-bench",
+  "private": true,
+  "description": "Opens the extension popup repeatedly in Chromium and reports open latency from the popup's own traces",
+  "scripts": {
+    "bench": "node bench.js"
+  },
+  "dependencies": {
+    "playwright": "1.58.0"
+  }
+}

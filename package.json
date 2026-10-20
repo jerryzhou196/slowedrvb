@@ -5,6 +5,6 @@
   "description": "Slow + reverb any track in the browser",
   "scripts": {
     "start": "npx -y serve .",
-    "zip:extension": "cd extension && rm -f ../slowedrvb-extension.zip && zip -r -X ../slowedrvb-extension.zip . -x '.*'"
+    "zip:extension": "sh scripts/zip-extension.sh"
   }
 }

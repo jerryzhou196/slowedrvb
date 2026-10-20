@@ -2,11 +2,49 @@
 // and reads/updates that tab's state through window.__slowedrvb. State is per tab,
 // so a fresh tab starts neutral and "reset" turns everything off.
 
+// ---- open-latency tracing ----
+// Every step of opening the popup is recorded by trace.js (ms since the popup document
+// started loading) and kept across opens; see debug.html (Shift+D in the popup).
+// DEBUG also echoes each step to the console and adds performance.marks for DevTools.
+// The store zip leaves trace.js out (npm run zip:extension), so fall back to a no-op.
+var DEBUG = false;
+var trace = window.slowedrvbTrace || {
+  mark: function () { return Math.round(performance.now() * 10) / 10; },
+  fact: function () {},
+  now: function () { return performance.now(); },
+  save: function () {},
+  trace: { marks: [] }
+};
+function mark(name, data, opts) {
+  var t = trace.mark(name, data, opts);
+  try { performance.mark('slowedrvb:' + name); } catch (e) {}
+  if (DEBUG) console.log('[slowedrvb] ' + t.toFixed(1) + 'ms ' + name + (data !== undefined ? ' — ' + JSON.stringify(data) : ''));
+}
+mark('popup.js start');
+
+// Finding the tab and injecting into it is the slowest step, so start it before
+// any other setup; init() picks up the result once the UI is wired.
+var hasChrome = typeof chrome !== 'undefined' && chrome.tabs && chrome.scripting;
+var tabReady = hasChrome ? (async function () {
+  mark('tabs.query start');
+  var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  var tab = tabs[0];
+  mark('tabs.query done', { tab: tab && tab.id });
+  mark('inject start');
+  // injecting returns content.js's last expression: each frame's current state
+  var results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id, allFrames: true },
+    files: ['settings.js', 'content.js']
+  });
+  return { tab: tab, results: results };
+})() : null;
+// rejections are handled in init(); don't let one surface as unhandled meanwhile
+if (tabReady) tabReady.catch(function () {});
+
 var $ = function (id) { return document.getElementById(id); };
 var record = $('record'), arm = $('arm'), statusEl = $('status'), controls = $('controls');
 var eightDBtn = $('eightD');
 
-var hasChrome = typeof chrome !== 'undefined' && chrome.tabs && chrome.scripting;
 var tabId = null;
 var state = slowedrvbWithDefaults(null);
 
@@ -57,6 +95,10 @@ async function call(next) {
     func: function (s) { return window.__slowedrvb ? window.__slowedrvb(s) : null; },
     args: [next || null]
   });
+  return merge(results);
+}
+
+function merge(results) {
   var frames = results.map(function (r) { return r.result; }).filter(Boolean);
   // prefer the frame that actually holds media (e.g. an embedded player)
   var main = frames.filter(function (f) { return f.mediaCount > 0; })[0] || frames[0];
@@ -113,26 +155,73 @@ $('more').addEventListener('click', function () {
   if (open) extras.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
-(async function init() {
-  paint(false);
+// The popup stays hidden (html.loading) until the tab's real state is painted, so
+// it never flashes the neutral defaults; the arm skips its swing on that first paint.
+var revealed = false;
+function reveal(reason) {
+  if (revealed) return;
+  revealed = true;
+  document.documentElement.classList.remove('loading');
+  trace.fact('revealReason', reason);
+  mark('revealed', reason);
+  requestAnimationFrame(function () {
+    mark('rAF after reveal');
+    // the frame after this rAF is the first one on screen with the real state
+    requestAnimationFrame(function () {
+      document.documentElement.classList.remove('no-anim');
+      mark('first real paint', undefined, { save: true });
+      if (DEBUG) setTimeout(function () { console.table(trace.trace.marks); }, 0);
+    });
+  });
+}
+// never leave the popup blank if the page is slow to answer. Always record when the
+// timer actually fired: firing well after 500ms means Chrome was throttling the popup.
+var FALLBACK_MS = 500;
+setTimeout(function () {
+  mark('fallback timer fired', { lateByMs: Math.round(trace.now() - FALLBACK_MS) });
+  if (!revealed) { paint(false); reveal('fallback: tab took >' + FALLBACK_MS + 'ms'); }
+}, FALLBACK_MS);
 
+// Shift+D: open the trace viewer (dev installs only; the store zip has no debug.html)
+document.addEventListener('keydown', function (e) {
+  if (e.shiftKey && (e.key === 'D' || e.key === 'd') && hasChrome && window.slowedrvbTrace) {
+    chrome.tabs.create({ url: chrome.runtime.getURL('debug.html') });
+  }
+});
+
+mark('popup.js setup done');
+
+(async function init() {
   if (!hasChrome) {   // opened as a plain page (store screenshots / local preview)
     state = slowedrvbWithDefaults(SLOWEDRVB_PRESETS.slowed);
     paint(true);
+    reveal('preview page, no chrome APIs');
     return;
   }
 
-  var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  tabId = tabs[0] && tabs[0].id;
   try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId, allFrames: true },
-      files: ['settings.js', 'content.js']
+    var got = await tabReady;
+    var tab = got.tab, results = got.results;
+    tabId = tab.id;
+    var origin = tab.url ? tab.url.split('/').slice(0, 3).join('/') : '(no url access)';
+    trace.fact('origin', origin);
+    trace.fact('tabStatus', tab.status);   // 'loading' tabs can be slow to inject
+    trace.fact('tabAudible', !!tab.audible);
+    var info = merge(results);
+    // how each frame spent its time (measured inside the page by content.js)
+    var frames = results.map(function (r) {
+      var p = r.result && r.result.perf;
+      return p ? { frame: r.frameId, fresh: p.fresh, scriptMs: p.scriptMs, sinceFrameLoadMs: p.sinceFrameLoadMs, mediaCount: r.result.mediaCount } : { frame: r.frameId, noResult: true };
     });
-    var info = await call(null);
+    trace.fact('frames', frames);
+    trace.fact('mediaCount', info.mediaCount);
+    trace.fact('reinjected', frames.some(function (f) { return f.fresh === false; }));
+    mark('inject + state returned', { frames: results.length, media: info.mediaCount, rate: info.state ? info.state.rate : null });
     if (info.state) state = slowedrvbWithDefaults(info.state);
     paint(info.playing);
     showStatus(info);
+    mark('state painted');
+    reveal('tab state');
     // keep the record in sync with play/pause while the popup is open
     setInterval(async function () {
       try {
@@ -142,7 +231,12 @@ $('more').addEventListener('click', function () {
       } catch (e) {}
     }, 1000);
   } catch (e) {
+    trace.fact('injectError', e && e.message);
+    mark('inject failed', e && e.message, { save: true });
+    paint(false);
     controls.classList.add('disabled');
+    $('presets').classList.add('disabled');
     statusEl.textContent = "chrome doesn't allow extensions on this page";
+    reveal('page not scriptable');
   }
 })();

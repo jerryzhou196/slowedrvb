@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>slowedrvb popup traces</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #2b2b2e; --panel: #232326; --track: #3b3b40; --text: #d9d8d2; --muted: #8a8a90;
+      --accent: #e8b130; --arm: #ff2a6d; --error: #ca4754;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+      /* one color per phase, in waterfall order */
+      --p-load: #5b5b63; --p-parse: #7d7d86; --p-js: #a07cc5; --p-setup: #c9a0dc; --p-query: #ff2a6d; --p-inject: #e8b130; --p-paint: #6fb3d2; --p-screen: #8fcf8a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 12px/1.5 var(--mono); }
+    main { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 16px; color: var(--accent); margin: 0 0 4px; }
+    h1::before { content: '> '; color: var(--muted); }
+    h2 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin: 28px 0 10px; font-weight: 400; }
+    p.lede { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    button, select {
+      min-height: 30px; padding: 0 10px; border: 1px solid var(--track); border-radius: 6px;
+      background: transparent; color: var(--text); font: inherit; cursor: pointer;
+    }
+    button:hover, select:hover { border-color: var(--accent); color: var(--accent); }
+    button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    button.danger:hover { border-color: var(--error); color: var(--error); }
+    .note { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--panel); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    th { color: var(--muted); font-weight: 400; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+    td.num, th.num { text-align: right; }
+    .stats td.slow { color: var(--arm); }
+    .wrap { overflow-x: auto; background: var(--panel); border-radius: 8px; padding: 4px 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 12px; color: var(--muted); }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    .wf { position: relative; height: 14px; min-width: 360px; background: var(--bg); border-radius: 3px; }
+    .wf span { position: absolute; top: 0; bottom: 0; }
+    .wf .tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); }
+    tr.row { cursor: pointer; }
+    tr.row:hover td { background: #2a2a2e; }
+    tr.detail td { white-space: pre-wrap; color: var(--muted); font-size: 11px; background: var(--bg); }
+    .flag { display: inline-block; padding: 0 6px; margin-right: 4px; border-radius: 4px; border: 1px solid var(--track); color: var(--muted); font-size: 10px; }
+    .flag.bad { border-color: var(--error); color: var(--error); }
+    .flag.warn { border-color: var(--accent); color: var(--accent); }
+    .empty { padding: 32px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>popup open traces</h1>
+    <p class="lede">every popup open on this install is recorded here, newest first. click a row for the raw timeline. times are ms since chrome started loading the popup. "cold" = first open in over a minute.</p>
+
+    <div class="bar">
+      <button type="button" id="refresh">refresh</button>
+      <select id="origin" aria-label="filter by site"><option value="">all sites</option></select>
+      <select id="temp" aria-label="filter by cold or warm">
+        <option value="">cold + warm</option><option value="cold">cold only</option><option value="warm">warm only</option>
+      </select>
+      <button type="button" id="export">download json</button>
+      <button type="button" id="copy">copy json</button>
+      <label class="note"><input type="file" id="import" accept="application/json"> view a json export</label>
+      <button type="button" class="danger" id="clear">clear</button>
+      <span class="note" id="msg" role="status"></span>
+    </div>
+
+    <h2>where the time goes</h2>
+    <div class="wrap"><table class="stats" id="stats"></table></div>
+
+    <h2>opens</h2>
+    <div class="legend" id="legend"></div>
+    <div class="wrap"><table id="opens"></table></div>
+  </main>
+  <script src="debug.js"></script>
+</body>
+</html>

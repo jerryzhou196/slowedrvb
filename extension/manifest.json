@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "slowedrvb — slowed + reverb any tab",
   "short_name": "slowedrvb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Slow down any tab and drench it in reverb, bass boost and 8D audio. Works on YouTube, SoundCloud and more.",
   "homepage_url": "https://slowedrvb.com/",
   "icons": {

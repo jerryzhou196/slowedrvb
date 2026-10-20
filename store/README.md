@@ -28,7 +28,7 @@ Everything the store asks for is in this repo:
 npm run zip:extension
 ```
 
-This zips the *contents* of `extension/` so that `manifest.json` sits at the root of the zip, which the store requires. Bump `"version"` in `extension/manifest.json` before every new upload.
+This zips the *contents* of `extension/` so that `manifest.json` sits at the root of the zip, which the store requires. It leaves out the popup debugging tools (`trace.js`, `debug.html`, `debug.js`); those stay in `extension/` for local use. Bump `"version"` in `extension/manifest.json` before every new upload.
 
 ## 3. Create the item
 
