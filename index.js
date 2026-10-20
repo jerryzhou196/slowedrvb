@@ -1751,6 +1751,20 @@ document.addEventListener('change', function (e) {
 });
 
 // ============================ EXTENSION SHOWCASE ============================
+(function setupExtensionDismiss() {
+  var showcase = document.querySelector('.extension-showcase');
+  var dismiss = document.querySelector('#extension-dismiss');
+  var dismissedKey = 'slowedrvb.extensionBannerDismissed';
+  if (!showcase || !dismiss) return;
+  try { showcase.hidden = localStorage.getItem(dismissedKey) === 'true'; } catch (e) {}
+  dismiss.addEventListener('click', function () {
+    showcase.hidden = true;
+    try { localStorage.setItem(dismissedKey, 'true'); } catch (e) {}
+    var playerHeading = document.querySelector('#web-player h2');
+    if (playerHeading) playerHeading.focus();
+  });
+})();
+
 // Store links work without JavaScript; analytics only records the CTA placement.
 document.querySelectorAll('[data-extension-cta]').forEach(function (cta) {
   cta.addEventListener('click', function () {

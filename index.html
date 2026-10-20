@@ -615,6 +615,7 @@
 
     /* The extension is the primary desktop entry point; the web player stays below. */
     .extension-showcase {
+      position: relative;
       display: grid;
       grid-template-columns: minmax(0, 1fr) 300px;
       align-items: center;
@@ -624,6 +625,18 @@
       border: 1px solid #53534a;
       border-radius: 20px;
       background: radial-gradient(ellipse at top right, #48412c, transparent 65%), var(--sub-alt);
+    }
+    .extension-dismiss {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 1;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.5rem;
     }
     .extension-eyebrow {
       margin-bottom: 16px;
@@ -664,7 +677,7 @@
     }
     .extension-install:hover { filter: brightness(1.1); }
     .extension-player-link, .extension-mobile-link { color: var(--text); font-size: 0.75rem; text-underline-offset: 4px; }
-    .extension-install:focus-visible, .extension-player-link:focus-visible, .extension-mobile-link:focus-visible {
+    .extension-dismiss:focus-visible, .extension-install:focus-visible, .extension-player-link:focus-visible, .extension-mobile-link:focus-visible {
       outline: 3px solid var(--text);
       outline-offset: 5px;
     }
@@ -931,6 +944,7 @@
 <body>
   <div class="card">
     <section class="extension-showcase" aria-labelledby="extension-title">
+      <button class="extension-dismiss" id="extension-dismiss" type="button" aria-label="Dismiss Chrome extension banner">&times;</button>
       <div>
         <p class="extension-eyebrow">slowedrvb / Chrome extension</p>
         <h1 id="extension-title">Your favorite tracks.<br><em>A whole new tempo.</em></h1>
@@ -961,7 +975,7 @@
       </div>
     </section>
     <div class="web-player-heading" id="web-player">
-      <h2>the original web player</h2>
+      <h2 tabindex="-1">the original web player</h2>
       <p>paste a YouTube URL or bring your own audio</p>
     </div>
     <div class="layout">
