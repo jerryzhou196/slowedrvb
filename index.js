@@ -85,8 +85,6 @@ var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
 var SAMPLE_YOUTUBE_URL = 'https://www.youtube.com/watch?v=abc123xyz00';
-// set to the chrome web store listing once it's approved; the banner stays hidden until then
-var CHROME_EXTENSION_URL = '';
 var EXTENSION_BANNER_DISMISSED_KEY = 'slowedrvb.extensionBannerDismissed';
 var mobileLoadedYoutubeUrl = '';
 var youtubePasteDownloadTimer = null;
@@ -1765,11 +1763,10 @@ function canInstallChromeExtension() {
 
 (function setupExtensionBanner() {
   var banner = document.querySelector('#extension-banner');
-  if (!banner || !CHROME_EXTENSION_URL || !canInstallChromeExtension()) return;
+  if (!banner || !canInstallChromeExtension()) return;
   try { if (localStorage.getItem(EXTENSION_BANNER_DISMISSED_KEY) === 'true') return; } catch (e) {}
 
   var cta = document.querySelector('#extension-banner-cta');
-  cta.href = CHROME_EXTENSION_URL;
   cta.addEventListener('click', function () {
     if (typeof posthog !== 'undefined') posthog.capture('extension_banner_click');
   });
