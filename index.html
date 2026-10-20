@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>slow playback audio — slow + reverb any track</title>
+  <title>slowedrvb — slowed + reverb any tab or track</title>
 
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 
   <!-- SEO -->
-  <meta name="description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Upload an mp3 or slow a live tab, then export. Free, no signup.">
+  <meta name="description" content="Get the free slowedrvb Chrome extension for slowed + reverb on YouTube, YouTube Music and SoundCloud. Or use the web player for your own tracks. No signup.">
   <meta name="keywords" content="slowed reverb, slow down audio, slowed and reverb maker, 8d audio, bass boost, mp3 slower, slowedrvb">
   <link rel="canonical" href="https://slowedrvb.com/">
   <meta name="robots" content="index, follow">
 
   <!-- Open Graph / Twitter -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="slow playback audio — slow + reverb any track">
-  <meta property="og:description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Free, no signup.">
+  <meta property="og:title" content="slowedrvb — slowed + reverb any tab or track">
+  <meta property="og:description" content="Slowed + reverb right where you listen. Get the free Chrome extension for YouTube and SoundCloud, or use the original web player. No signup.">
   <meta property="og:url" content="https://slowedrvb.com/">
   <meta property="og:image" content="https://slowedrvb.com/stick.svg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="slow playback audio — slow + reverb any track">
-  <meta name="twitter:description" content="Slow any song down and drench it in reverb, bass boost, and 8D audio — right in your browser. Free, no signup.">
+  <meta name="twitter:title" content="slowedrvb — slowed + reverb any tab or track">
+  <meta name="twitter:description" content="Slowed + reverb right where you listen. Get the free Chrome extension for YouTube and SoundCloud, or use the original web player. No signup.">
 
   <!-- structured data: tells Google this is a free web app -->
   <script type="application/ld+json">
@@ -613,52 +613,96 @@
       }
     }
 
-    /* "now a chrome extension" announcement, desktop chromium only (see index.js) */
-    .extension-banner {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 100;
-      display: flex;
+    /* The extension is the primary desktop entry point; the web player stays below. */
+    .extension-showcase {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
       align-items: center;
-      gap: 14px;
-      width: max-content;
-      max-width: calc(100% - 32px);
-      padding: 8px 8px 8px 16px;
-      border-radius: 10px;
-      background: var(--sub-alt);
-      box-shadow: inset 0 0 0 2px rgba(255, 0, 122, 0.6), 0 10px 30px rgba(0, 0, 0, 0.35);
-      font-size: 0.75rem;
-      color: var(--text);
-      animation: fadeIn 0.3s ease;
+      gap: 48px;
+      margin-bottom: 40px;
+      padding: 40px;
+      border: 1px solid #53534a;
+      border-radius: 20px;
+      background: radial-gradient(ellipse at top right, #48412c, transparent 65%), var(--sub-alt);
     }
-    .extension-banner b { color: var(--pink); font-weight: 600; }
-    .extension-banner-cta {
-      flex: 0 0 auto;
-      padding: 8px 12px;
-      border-radius: 6px;
-      background: var(--pink);
-      color: var(--text);
+    .extension-eyebrow {
+      margin-bottom: 16px;
+      color: var(--main);
+      font-size: 0.6875rem;
       font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .extension-showcase h1 {
+      max-width: 600px;
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      line-height: 1.12;
+      letter-spacing: -0.055em;
+      color: var(--text);
+    }
+    .extension-showcase h1::before { content: none; }
+    .extension-showcase h1 em { color: var(--main); font-style: normal; }
+    .extension-description {
+      max-width: 520px;
+      margin: 20px 0;
+      font-size: 0.875rem;
+      line-height: 1.8;
+    }
+    .extension-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+    .extension-install {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: 8px;
+      background: var(--main);
+      color: var(--bg);
+      font-size: 0.8125rem;
+      font-weight: 700;
       text-decoration: none;
-      transition: filter 0.12s;
     }
-    .extension-banner-cta:hover { filter: brightness(1.12); }
-    .extension-banner .extension-banner-close {
-      flex: 0 0 auto;
-      width: 30px;
-      padding: 6px 0;
-      background: transparent;
-      color: var(--sub);
-      font-size: 1rem;
-      line-height: 1;
+    .extension-install:hover { filter: brightness(1.1); }
+    .extension-player-link, .extension-mobile-link { color: var(--text); font-size: 0.75rem; text-underline-offset: 4px; }
+    .extension-install:focus-visible, .extension-player-link:focus-visible, .extension-mobile-link:focus-visible {
+      outline: 3px solid var(--text);
+      outline-offset: 5px;
     }
-    .extension-banner .extension-banner-close:hover { background: var(--bg); color: var(--text); }
-    body.has-extension-banner { padding-top: 84px; }   /* keep the fixed banner off the status line */
+    .extension-assurance { margin-top: 16px; color: #aaa99e; font-size: 0.6875rem; line-height: 1.8; }
+    .extension-features { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; list-style: none; }
+    .extension-features li { padding: 6px 10px; border: 1px solid #53534a; border-radius: 6px; font-size: 0.6875rem; }
+    .extension-preview {
+      padding: 22px;
+      border: 1px solid #53534a;
+      border-radius: 14px;
+      background: #262626;
+      box-shadow: 0 20px 50px #0004;
+      transform: rotate(2deg);
+    }
+    .extension-preview-title { color: #e8b130; font-size: 1.1rem; font-weight: 700; }
+    .extension-preview-site { margin: 8px 0 24px; color: #aaa99e; font-size: 0.6875rem; }
+    .extension-preview-presets { display: flex; gap: 6px; margin-bottom: 22px; font-size: 0.625rem; }
+    .extension-preview-presets span { padding: 8px; background: #3b3b3e; border-radius: 5px; }
+    .extension-preview-presets span:first-child { background: #e8b130; color: #262626; }
+    .extension-preview-row { display: flex; justify-content: space-between; margin-top: 20px; font-size: 0.6875rem; text-transform: uppercase; }
+    .extension-preview-row b { color: #e8b130; }
+    .extension-preview-track { height: 5px; margin-top: 14px; background: #53534a; border-radius: 4px; }
+    .extension-preview-track span { display: block; width: var(--fill); height: 100%; border-radius: inherit; background: #e8b130; position: relative; }
+    .extension-preview-track span::after { content: ''; position: absolute; right: -5px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e8b130; }
+    .extension-preview-footer { margin-top: 28px; text-align: center; color: #aaa99e; font-size: 0.625rem; }
+    .web-player-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--sub); margin-bottom: 24px; }
+    .web-player-heading h2 { color: var(--main); font-size: 0.875rem; font-weight: 500; }
+    .web-player-heading p { color: #aaa99e; font-size: 0.6875rem; }
+    #web-player { scroll-margin-top: 24px; }
+    .extension-mobile-link { display: none; }
+    @media (max-width: 960px) and (min-width: 761px) {
+      .extension-showcase { gap: 24px; padding: 28px; grid-template-columns: minmax(0, 1fr) 260px; }
+      .extension-preview { padding: 16px; }
+    }
     @media (max-width: 760px) {
-      .extension-banner { display: none; }
-      body.has-extension-banner { padding-top: 16px; }
+      .extension-showcase, .web-player-heading { display: none; }
+      .extension-mobile-link { display: block; width: 100%; padding: 10px 0; line-height: 1.7; }
+      #mobile-more-options { flex-wrap: wrap; }
     }
 
     .slider-section.disabled { opacity: 0.4; }
@@ -885,12 +929,41 @@
   </style>
 </head>
 <body>
-  <div class="extension-banner" id="extension-banner" role="region" aria-label="announcement" hidden>
-    <span class="extension-banner-text"><b>new:</b> slowedrvb is now a chrome extension — slow + reverb youtube, soundcloud, any tab, no downloads.</span>
-    <a class="extension-banner-cta" id="extension-banner-cta" target="_blank" rel="noopener">add to chrome</a>
-    <button class="extension-banner-close" id="extension-banner-close" aria-label="dismiss announcement">&times;</button>
-  </div>
   <div class="card">
+    <section class="extension-showcase" aria-labelledby="extension-title">
+      <div>
+        <p class="extension-eyebrow">slowedrvb / Chrome extension</p>
+        <h1 id="extension-title">Your favorite tracks.<br><em>A whole new tempo.</em></h1>
+        <p class="extension-description">Slowed + reverb, right where you listen. Turn YouTube, YouTube Music and SoundCloud into your own late-night mix without leaving the tab.</p>
+        <div class="extension-actions">
+          <a class="extension-install" href="https://chromewebstore.google.com/detail/fllljfakaaapihnnjfblfhfodcpnefpa" target="_blank" rel="noopener" data-extension-cta="hero">Get the Chrome extension <span aria-hidden="true">&#8599;</span></a>
+          <a class="extension-player-link" href="#web-player">or use the web player &#8595;</a>
+        </div>
+        <p class="extension-assurance">Free. No account. Audio effects run locally in your browser.<br>Install in desktop Chrome. Pin it, play a track, pick your preset.</p>
+        <ul class="extension-features" aria-label="Extension features">
+          <li>speed + pitch</li>
+          <li>reverb</li>
+          <li>bass boost</li>
+          <li>8D audio + pan</li>
+        </ul>
+      </div>
+      <div class="extension-preview" aria-hidden="true">
+        <div class="extension-preview-title">&gt; slowedrvb</div>
+        <div class="extension-preview-site">your tab. your sound.</div>
+        <div class="extension-preview-presets"><span>slowed + reverb</span><span>sped up</span><span>reset</span></div>
+        <div class="extension-preview-row"><span>speed</span><b>0.80&#215;</b></div>
+        <div class="extension-preview-track"><span style="--fill: 53%"></span></div>
+        <div class="extension-preview-row"><span>reverb</span><b>35%</b></div>
+        <div class="extension-preview-track"><span style="--fill: 35%"></span></div>
+        <div class="extension-preview-row"><span>bass</span><b>+4.0 dB</b></div>
+        <div class="extension-preview-track"><span style="--fill: 27%"></span></div>
+        <div class="extension-preview-footer">a little slower. a little further away.</div>
+      </div>
+    </section>
+    <div class="web-player-heading" id="web-player">
+      <h2>the original web player</h2>
+      <p>paste a YouTube URL or bring your own audio</p>
+    </div>
     <div class="layout">
       <div class="vinyl-col">
         <div class="vinyl-player">
@@ -930,6 +1003,7 @@
           <button class="mobile-options-toggle" id="btn-mobile-more-options" onclick="toggle_mobile_more_options()" aria-expanded="false" aria-controls="mobile-more-options">more options &#9662;</button>
           <div class="mobile-btn-row" id="mobile-more-options" hidden>
             <label class="mobile-file-button" id="btn-choose-mp3" for="file-input" role="button" tabindex="0">choose mp3</label>
+            <a class="extension-mobile-link" href="https://chromewebstore.google.com/detail/fllljfakaaapihnnjfblfhfodcpnefpa" target="_blank" rel="noopener" data-extension-cta="mobile">Listening on a computer? Get slowedrvb for desktop Chrome &#8599;</a>
           </div>
         </div>
 
