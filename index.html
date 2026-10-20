@@ -613,49 +613,60 @@
       }
     }
 
-    /* "now a chrome extension" announcement, desktop chromium only (see index.js) */
+    /* chrome extension promo: a full-width bar along the top edge, desktop chromium only (see index.js) */
     .extension-banner {
       position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
       display: flex;
       align-items: center;
-      gap: 14px;
-      width: max-content;
-      max-width: calc(100% - 32px);
-      padding: 8px 8px 8px 16px;
-      border-radius: 10px;
+      justify-content: center;
+      gap: 24px;
+      height: 64px;
+      padding: 0 64px;
       background: var(--sub-alt);
-      box-shadow: inset 0 0 0 2px rgba(255, 0, 122, 0.6), 0 10px 30px rgba(0, 0, 0, 0.35);
-      font-size: 0.75rem;
-      color: var(--text);
-      animation: fadeIn 0.3s ease;
+      border-bottom: 2px solid var(--main);
+      font-size: 0.9375rem;
+      color: var(--sub);
+      white-space: nowrap;
     }
-    .extension-banner b { color: var(--pink); font-weight: 600; }
+    .extension-banner-text { overflow: hidden; text-overflow: ellipsis; }
+    .extension-banner-text strong { color: var(--text); font-weight: 600; }
+    .extension-banner-text em { color: var(--text); font-style: normal; }
     .extension-banner-cta {
       flex: 0 0 auto;
-      padding: 8px 12px;
-      border-radius: 6px;
-      background: var(--pink);
-      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: var(--main);
+      color: var(--bg);
       font-weight: 600;
       text-decoration: none;
       transition: filter 0.12s;
     }
-    .extension-banner-cta:hover { filter: brightness(1.12); }
+    .extension-banner-cta:hover { filter: brightness(1.1); }
     .extension-banner .extension-banner-close {
-      flex: 0 0 auto;
-      width: 30px;
-      padding: 6px 0;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      flex: none;
+      width: 36px;
+      height: 36px;
+      padding: 0;
       background: transparent;
       color: var(--sub);
-      font-size: 1rem;
+      font-size: 1.25rem;
       line-height: 1;
     }
-    .extension-banner .extension-banner-close:hover { background: var(--bg); color: var(--text); }
-    body.has-extension-banner { padding-top: 84px; }   /* keep the fixed banner off the status line */
+    .extension-banner .extension-banner-close:hover { background: transparent; color: var(--text); }
+    .extension-banner .extension-banner-close:active { transform: translateY(-50%) scale(0.92); }
+    .extension-banner-cta:focus-visible,
+    .extension-banner .extension-banner-close:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; border-radius: 4px; }
+    @media (max-width: 1340px) { .extension-banner-detail { display: none; } }
+    @media (max-width: 960px) { .extension-banner { font-size: 0.8125rem; padding: 0 56px 0 24px; } }
+    body.has-extension-banner { padding-top: 90px; }   /* 64px strip + 2px rule + the usual 24px */
     @media (max-width: 760px) {
       .extension-banner { display: none; }
       body.has-extension-banner { padding-top: 16px; }
@@ -885,10 +896,10 @@
   </style>
 </head>
 <body>
-  <div class="extension-banner" id="extension-banner" role="region" aria-label="announcement" hidden>
-    <span class="extension-banner-text"><b>new:</b> slowedrvb is now a chrome extension — slow + reverb youtube, soundcloud, any tab, no downloads.</span>
-    <a class="extension-banner-cta" id="extension-banner-cta" target="_blank" rel="noopener">add to chrome</a>
-    <button class="extension-banner-close" id="extension-banner-close" aria-label="dismiss announcement">&times;</button>
+  <div class="extension-banner" id="extension-banner" role="region" aria-label="chrome extension" hidden>
+    <span class="extension-banner-text"><strong>slowedrvb is now a chrome extension</strong> — it's <em>free</em> and <em>better</em><span class="extension-banner-detail">: works right on youtube and soundcloud, no links to paste</span></span>
+    <a class="extension-banner-cta" id="extension-banner-cta" href="https://chromewebstore.google.com/detail/fllljfakaaapihnnjfblfhfodcpnefpa" target="_blank" rel="noopener">add to chrome, free &rarr;</a>
+    <button class="extension-banner-close" id="extension-banner-close" aria-label="hide">&times;</button>
   </div>
   <div class="card">
     <div class="layout">
