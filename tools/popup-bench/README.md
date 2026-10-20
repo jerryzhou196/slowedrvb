@@ -28,7 +28,9 @@ It also records:
 - **Visibility:** when Chrome switched the popup from `hidden` to `visible`.
 - **Other signals:** long tasks, JS errors, event-loop lag, the time since the previous open (cold vs warm), and navigation timing.
 
-The traces live in a 200-entry ring buffer in the extension's own `localStorage`. Recording is
+The traces live in a 200-entry ring buffer in the extension's own `localStorage`. The store zip
+(`npm run zip:extension`) leaves `trace.js`, `debug.html` and `debug.js` out entirely and `popup.js`
+runs with a no-op tracer, so this only exists in the unpacked `extension/` folder. Recording is
 **only on for unpacked installs**: store installs have an `update_url` and record nothing unless
 `localStorage['slowedrvb.traceForce'] = '1'` is set from the popup's DevTools.
 

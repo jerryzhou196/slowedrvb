@@ -6,8 +6,15 @@
 // Every step of opening the popup is recorded by trace.js (ms since the popup document
 // started loading) and kept across opens; see debug.html (Shift+D in the popup).
 // DEBUG also echoes each step to the console and adds performance.marks for DevTools.
-var DEBUG = true;
-var trace = window.slowedrvbTrace;
+// The store zip leaves trace.js out (npm run zip:extension), so fall back to a no-op.
+var DEBUG = false;
+var trace = window.slowedrvbTrace || {
+  mark: function () { return Math.round(performance.now() * 10) / 10; },
+  fact: function () {},
+  now: function () { return performance.now(); },
+  save: function () {},
+  trace: { marks: [] }
+};
 function mark(name, data, opts) {
   var t = trace.mark(name, data, opts);
   try { performance.mark('slowedrvb:' + name); } catch (e) {}
@@ -175,9 +182,9 @@ setTimeout(function () {
   if (!revealed) { paint(false); reveal('fallback: tab took >' + FALLBACK_MS + 'ms'); }
 }, FALLBACK_MS);
 
-// Shift+D: open the trace viewer
+// Shift+D: open the trace viewer (dev installs only; the store zip has no debug.html)
 document.addEventListener('keydown', function (e) {
-  if (e.shiftKey && (e.key === 'D' || e.key === 'd') && hasChrome) {
+  if (e.shiftKey && (e.key === 'D' || e.key === 'd') && hasChrome && window.slowedrvbTrace) {
     chrome.tabs.create({ url: chrome.runtime.getURL('debug.html') });
   }
 });
