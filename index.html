@@ -639,8 +639,10 @@
       }
     }
 
-    /* chrome extension promo: a full-width bar along the top edge, desktop chromium only (see index.js) */
-    .extension-banner {
+    /* chrome extension promo bar. Whether it shows is decided by the inline script in
+       <head> before first paint (html.show-extension-banner), so it never pops in. */
+    .extension-banner { display: none; }
+    html.show-extension-banner .extension-banner {
       position: fixed;
       top: 0;
       left: 0;
@@ -649,52 +651,40 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 24px;
-      height: 64px;
-      padding: 0 64px;
+      gap: 20px;
+      height: 52px;
       background: var(--sub-alt);
-      font-size: 0.9375rem;
+      font-size: 0.875rem;
       color: var(--sub);
-      white-space: nowrap;
     }
-    .extension-banner-text { overflow: hidden; text-overflow: ellipsis; }
-    .extension-banner-text strong { color: var(--text); font-weight: 600; }
-    .extension-banner-text em { color: var(--text); font-style: normal; }
-    .extension-banner-cta {
-      flex: 0 0 auto;
-      padding: 10px 18px;
-      border-radius: 8px;
+    html.show-extension-banner body { padding-top: 76px; }   /* 52px bar + the usual 24px */
+    .extension-banner strong { color: var(--text); font-weight: 600; }
+    .extension-banner a {
+      padding: 7px 14px;
+      border-radius: 6px;
       background: var(--main);
       color: var(--bg);
       font-weight: 600;
       text-decoration: none;
-      transition: filter 0.12s;
     }
-    .extension-banner-cta:hover { filter: brightness(1.1); }
-    .extension-banner .extension-banner-close {
+    .extension-banner a:hover { filter: brightness(1.1); }
+    .extension-banner button {
       position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
+      right: 12px;
       flex: none;
-      width: 36px;
-      height: 36px;
-      padding: 0;
+      width: 32px;
+      padding: 4px 0;
       background: transparent;
       color: var(--sub);
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       line-height: 1;
     }
-    .extension-banner .extension-banner-close:hover { background: transparent; color: var(--text); }
-    .extension-banner .extension-banner-close:active { transform: translateY(-50%) scale(0.92); }
-    .extension-banner-cta:focus-visible,
-    .extension-banner .extension-banner-close:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; border-radius: 4px; }
-    @media (max-width: 1340px) { .extension-banner-detail { display: none; } }
-    @media (max-width: 960px) { .extension-banner { font-size: 0.8125rem; padding: 0 56px 0 24px; } }
-    body.has-extension-banner { padding-top: 88px; }   /* 64px bar + the usual 24px */
+    .extension-banner button:hover { background: transparent; color: var(--text); }
+    .extension-banner a:focus-visible,
+    .extension-banner button:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
     @media (max-width: 760px) {
-      .extension-banner { display: none; }
-      body.has-extension-banner { padding-top: 16px; }
+      html.show-extension-banner .extension-banner { display: none; }
+      html.show-extension-banner body { padding-top: 16px; }
     }
 
     .slider-section.disabled { opacity: 0.4; }
@@ -931,12 +921,23 @@
       }
     }
   </style>
+  <!-- decide on the extension banner before first paint, so it never pops in (see index.js) -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('slowedrvb.extensionBannerDismissed') === 'true') return;
+      } catch (e) {}
+      var ua = navigator.userAgentData;
+      var chromium = !!ua && ua.brands.some(function (b) { return /chromium|google chrome/i.test(b.brand); });
+      if (chromium && !ua.mobile) document.documentElement.classList.add('show-extension-banner');
+    })();
+  </script>
 </head>
 <body>
-  <div class="extension-banner" id="extension-banner" role="region" aria-label="chrome extension" hidden>
-    <span class="extension-banner-text"><strong>slowedrvb is now a chrome extension</strong> — it's <em>free</em> and <em>better</em><span class="extension-banner-detail">: works right on youtube and soundcloud, no links to paste</span></span>
-    <a class="extension-banner-cta" id="extension-banner-cta" href="https://chromewebstore.google.com/detail/fllljfakaaapihnnjfblfhfodcpnefpa" target="_blank" rel="noopener">add to chrome, free &rarr;</a>
-    <button class="extension-banner-close" id="extension-banner-close" aria-label="hide">&times;</button>
+  <div class="extension-banner" id="extension-banner" role="region" aria-label="chrome extension">
+    <span><strong>slowedrvb is now a chrome extension</strong> — free, and better.</span>
+    <a id="extension-banner-cta" href="https://chromewebstore.google.com/detail/fllljfakaaapihnnjfblfhfodcpnefpa" target="_blank" rel="noopener">add to chrome</a>
+    <button type="button" id="extension-banner-close" aria-label="hide">&times;</button>
   </div>
   <div class="card">
     <aside class="service-notice" id="download-apology" aria-label="YouTube download update">

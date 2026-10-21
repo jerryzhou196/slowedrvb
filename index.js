@@ -1724,31 +1724,19 @@ document.addEventListener('change', function (e) {
 });
 
 // ============================ EXTENSION BANNER ============================
-// points desktop chromium users (chrome, edge, brave, arc) at the chrome extension
-
-function canInstallChromeExtension() {
-  var brands = (navigator.userAgentData && navigator.userAgentData.brands) || [];
-  var chromium = brands.some(function (b) { return /chromium|google chrome/i.test(b.brand); });
-  var mobile = navigator.userAgentData ? navigator.userAgentData.mobile : /Mobi|Android/i.test(navigator.userAgent);
-  return chromium && !mobile;
-}
+// Whether the banner shows is decided in <head> before first paint (desktop chromium,
+// not dismissed); this only wires up the link and the close button.
 
 (function setupExtensionBanner() {
   var banner = document.querySelector('#extension-banner');
-  if (!banner || !canInstallChromeExtension()) return;
-  try { if (localStorage.getItem(EXTENSION_BANNER_DISMISSED_KEY) === 'true') return; } catch (e) {}
-
-  var cta = document.querySelector('#extension-banner-cta');
-  cta.addEventListener('click', function () {
+  if (!banner) return;
+  document.querySelector('#extension-banner-cta').addEventListener('click', function () {
     if (typeof posthog !== 'undefined') posthog.capture('extension_banner_click');
   });
   document.querySelector('#extension-banner-close').addEventListener('click', function () {
-    banner.hidden = true;
-    document.body.classList.remove('has-extension-banner');
+    document.documentElement.classList.remove('show-extension-banner');
     try { localStorage.setItem(EXTENSION_BANNER_DISMISSED_KEY, 'true'); } catch (e) {}
   });
-  banner.hidden = false;
-  document.body.classList.add('has-extension-banner');
 })();
 
 
