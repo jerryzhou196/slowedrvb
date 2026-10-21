@@ -40,7 +40,7 @@
       var failure;
       try {
         notify(attempt === 1 ? 'fetching from youtube…' : 'retrying download… (attempt ' + attempt + ' of ' + maxAttempts + ')');
-        response = await fetcher(url, { signal: controller.signal, headers: options.headers });
+        response = await fetcher(url, { signal: controller.signal, headers: options.headers, targetAddressSpace: options.targetAddressSpace });
         if (!response.ok) {
           var message = (await response.text()).slice(0, 2000);
           var retryAfter = response.headers.get('retry-after');

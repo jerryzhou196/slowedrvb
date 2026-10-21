@@ -84,9 +84,10 @@ test('HTTP 200 error pages are not cached or retried as audio', async () => {
 test('local downloader authorization header is preserved across retries', async () => {
   let calls = 0;
   await fetchAudio('http://127.0.0.1:11183/download', {
-    ...instant, headers: { 'X-Local-Download': '1' },
+    ...instant, headers: { 'X-Local-Download': '1' }, targetAddressSpace: 'loopback',
     fetch: async (_url, options) => {
       assert.equal(options.headers['X-Local-Download'], '1');
+      assert.equal(options.targetAddressSpace, 'loopback');
       return ++calls === 1 ? new Response('busy', { status: 503 }) : audio();
     },
   });

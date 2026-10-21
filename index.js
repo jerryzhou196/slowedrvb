@@ -1037,6 +1037,7 @@ window.download_youtube = async function (blurOnValidUrl) {
       {
         signal: youtubeDownloadController ? youtubeDownloadController.signal : undefined,
         headers: { 'X-Local-Download': '1' },
+        targetAddressSpace: 'loopback',
         onStatus: function (text) { setMobileStatus(text, 'streaming'); },
       }
     );
