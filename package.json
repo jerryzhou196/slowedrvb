@@ -4,6 +4,7 @@
   "private": true,
   "description": "Slow + reverb any track in the browser",
   "scripts": {
+    "test": "node --test test/*.test.js",
     "start": "npx -y serve .",
     "zip:extension": "sh scripts/zip-extension.sh"
   }

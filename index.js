@@ -994,28 +994,6 @@ function startYoutubeDownloadFromInput(blurOnValidUrl) {
   window.download_youtube(blurOnValidUrl);
 }
 
-// stream the response so we can show real transfer progress instead of one frozen "downloading…"
-async function readBlobWithProgress(response) {
-  var total = Number(response.headers.get('content-length')) || 0;
-  if (!response.body || !response.body.getReader) return response.blob(); // ponytail: old browsers, just await the blob
-  var reader = response.body.getReader();
-  var chunks = [];
-  var received = 0;
-  while (true) {
-    var step = await reader.read();
-    if (step.done) break;
-    chunks.push(step.value);
-    received += step.value.length;
-    var mb = (received / 1048576).toFixed(1);
-    setMobileStatus(
-      total ? 'receiving audio… ' + Math.round((received / total) * 100) + '% (' + mb + ' MB)'
-            : 'receiving audio… ' + mb + ' MB',
-      'streaming'
-    );
-  }
-  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
-}
-
 window.download_youtube = async function (blurOnValidUrl) {
   if (youtubeDownloadInFlight) return;
   var sourceUrl = youtubeUrlInput ? youtubeUrlInput.value.trim() : '';
@@ -1054,22 +1032,15 @@ window.download_youtube = async function (blurOnValidUrl) {
       return;
     }
 
-    setMobileStatus('connecting to server…', 'streaming');
-    // server runs yt-dlp before sending headers, so this await IS the "fetching" wait
-    setMobileStatus('fetching from youtube…', 'streaming');
-    var response = await fetch(
+    var downloaded = await YoutubeDownload.fetchAudio(
       YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl),
-      youtubeDownloadController ? { signal: youtubeDownloadController.signal } : undefined
+      {
+        signal: youtubeDownloadController ? youtubeDownloadController.signal : undefined,
+        onStatus: function (text) { setMobileStatus(text, 'streaming'); },
+      }
     );
-    if (!response.ok) {
-      var message = '';
-      try { message = await response.text(); } catch (e) {}
-      throw new Error(message || ('download failed: ' + response.status));
-    }
-
-    var blob = await readBlobWithProgress(response);
     throwIfYoutubeCanceled();
-    var file = fileFromDownload(blob, response);
+    var file = fileFromDownload(downloaded.blob, downloaded.response);
     setMobileStatus('saving locally…', 'streaming');
     await saveYoutubeTrack(file, sourceUrl);
     renderSavedSongs();
