@@ -80,7 +80,7 @@ var mobileChooseMp3 = document.querySelector('#btn-choose-mp3');
 var savedSongsList = document.querySelector('#saved-songs-list');
 var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
-var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://jerryzhou.ca/ytdlp/download';
+var YOUTUBE_DOWNLOAD_ENDPOINT = 'http://127.0.0.1:11183/download';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
@@ -1036,6 +1036,7 @@ window.download_youtube = async function (blurOnValidUrl) {
       YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl),
       {
         signal: youtubeDownloadController ? youtubeDownloadController.signal : undefined,
+        headers: { 'X-Local-Download': '1' },
         onStatus: function (text) { setMobileStatus(text, 'streaming'); },
       }
     );
@@ -1051,7 +1052,7 @@ window.download_youtube = async function (blurOnValidUrl) {
     if (youtubeDownloadCanceled || (e && e.name === 'AbortError')) {
       setMobileStatus('download canceled.', '');
     } else {
-      setMobileStatus(e && e.message ? e.message : 'download failed.', 'error');
+      setMobileStatus(e instanceof TypeError ? 'Open Local YouTube Downloader on this Mac and allow local-network access in your browser, then retry.' : e && e.message ? e.message : 'download failed.', 'error');
     }
   } finally {
     setYoutubeFetching(false);

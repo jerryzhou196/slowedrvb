@@ -79,3 +79,16 @@ test('HTTP 200 error pages are not cached or retried as audio', async () => {
   await assert.rejects(fetchAudio('https://example.test', { ...instant, fetch: async () => { calls++; return new Response('error page', { headers: { 'content-type': 'text/html' } }); } }), /did not return an audio/);
   assert.equal(calls, 1);
 });
+
+
+test('local downloader authorization header is preserved across retries', async () => {
+  let calls = 0;
+  await fetchAudio('http://127.0.0.1:11183/download', {
+    ...instant, headers: { 'X-Local-Download': '1' },
+    fetch: async (_url, options) => {
+      assert.equal(options.headers['X-Local-Download'], '1');
+      return ++calls === 1 ? new Response('busy', { status: 503 }) : audio();
+    },
+  });
+  assert.equal(calls, 2);
+});
