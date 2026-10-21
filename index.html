@@ -114,6 +114,7 @@
       max-width: 1080px;
     }
 
+    html:not(.has-service-notice) .service-notice { display: none; }   /* dismissed: see <head> */
     .service-notice {
       display: flex;
       align-items: flex-start;
@@ -921,15 +922,16 @@
       }
     }
   </style>
-  <!-- decide on the extension banner before first paint, so it never pops in (see index.js) -->
+  <!-- decide on the dismissible notices before first paint, so nothing pops in or out (see index.js) -->
   <script>
     (function () {
-      try {
-        if (localStorage.getItem('slowedrvb.extensionBannerDismissed') === 'true') return;
-      } catch (e) {}
+      var html = document.documentElement;
+      var get = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+      if (get('slowedrvb.downloadApologyDismissed.v1') === 'true') html.classList.remove('has-service-notice');
+      if (get('slowedrvb.extensionBannerDismissed') === 'true') return;
       var ua = navigator.userAgentData;
       var chromium = !!ua && ua.brands.some(function (b) { return /chromium|google chrome/i.test(b.brand); });
-      if (chromium && !ua.mobile) document.documentElement.classList.add('show-extension-banner');
+      if (chromium && !ua.mobile) html.classList.add('show-extension-banner');
     })();
   </script>
 </head>
@@ -942,7 +944,7 @@
   <div class="card">
     <aside class="service-notice" id="download-apology" aria-label="YouTube download update">
       <p><strong>Sorry about the recent YouTube download issues.</strong> Downloads are working again. No app installation needed.</p>
-      <button type="button" id="download-apology-close" aria-label="Dismiss download update" hidden>&times;</button>
+      <button type="button" id="download-apology-close" aria-label="Dismiss download update">&times;</button>
     </aside>
     <div class="layout">
       <div class="vinyl-col">
@@ -978,7 +980,8 @@
             <input class="mobile-field" id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="youtube url" aria-label="youtube url">
           </div>
           <button id="btn-youtube-download" onclick="download_youtube()">play</button>
-          <ul class="saved-songs-list" id="saved-songs-list" aria-label="saved songs"></ul>
+          <!-- the invisible row holds the list's height until renderSavedSongs fills it in -->
+          <ul class="saved-songs-list" id="saved-songs-list" aria-label="saved songs"><li class="empty" aria-hidden="true" style="visibility: hidden">&nbsp;</li></ul>
           <button id="btn-clear-songs" onclick="clear_saved_songs()" hidden>clear saved songs</button>
           <button class="mobile-options-toggle" id="btn-mobile-more-options" onclick="toggle_mobile_more_options()" aria-expanded="false" aria-controls="mobile-more-options">more options &#9662;</button>
           <div class="mobile-btn-row" id="mobile-more-options" hidden>
