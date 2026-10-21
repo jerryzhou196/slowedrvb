@@ -49,6 +49,11 @@
           if (Number.isFinite(after)) retryDelay = Math.max(0, after * 1000);
           failure = new Error('download failed (' + response.status + ')' + (message ? ': ' + message : ''));
           failure.retryable = RETRYABLE.indexOf(response.status) !== -1 && retryDelay <= 30000;
+          try {
+            var errorBody = JSON.parse(message);
+            failure.code = errorBody.code || (errorBody.detail && errorBody.detail.code);
+          } catch (_) {}
+          if (failure.code === 'youtube_ip_blocked') failure.retryable = false;
           if (/not a bot|sign in to confirm|private video|video unavailable|video has been removed/i.test(message)) failure.retryable = false;
           throw failure;
         }
@@ -99,7 +104,52 @@
     }
   }
 
-  var api = { fetchAudio: fetchAudio, wait: wait };
+  async function fetchPreferredAudio(sourceUrl, options) {
+    options = options || {};
+    var notify = options.onStatus || function () {};
+    var signal = options.signal;
+    var fetcher = options.fetch || root.fetch.bind(root);
+    if (signal && signal.aborted) throw canceled();
+    var controller = new AbortController();
+    var timedOut = false;
+    var abort = function () { controller.abort(); };
+    if (signal) signal.addEventListener('abort', abort, { once: true });
+    var timer = setTimeout(function () { timedOut = true; controller.abort(); }, options.probeTimeoutMs || 16000);
+    var blocked;
+    try {
+      notify('checking youtube availability…');
+      var response = await fetcher(options.probeEndpoint + '?url=' + encodeURIComponent(sourceUrl), { signal: controller.signal });
+      var check = await response.json();
+      if (!response.ok || (check.status !== 'ok' && check.status !== 'ip_blocked')) {
+        throw new Error(check.status === 'video_unavailable' ? 'video unavailable or private' : 'Could not check the download service. Please retry.');
+      }
+      blocked = check.status === 'ip_blocked';
+    } catch (error) {
+      if (signal && signal.aborted) throw canceled();
+      if (timedOut) throw new Error('Download availability check timed out. Please retry.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', abort);
+      controller.abort();
+    }
+    if (signal && signal.aborted) throw canceled();
+    if (!blocked) {
+      try {
+        return await fetchAudio(options.primaryEndpoint + '?url=' + encodeURIComponent(sourceUrl), Object.assign({}, options, { headers: undefined }));
+      } catch (error) {
+        if (signal && signal.aborted) throw canceled();
+        // A block may appear after a successful probe. Switch without retrying EC2.
+        if (error.code !== 'youtube_ip_blocked') throw error;
+      }
+    }
+    notify('switching download connection…');
+    return fetchAudio(options.fallbackEndpoint + '?url=' + encodeURIComponent(sourceUrl), Object.assign({}, options, {
+      headers: { 'X-Local-Download': '1' },
+    }));
+  }
+
+  var api = { fetchAudio: fetchAudio, fetchPreferredAudio: fetchPreferredAudio, wait: wait };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.YoutubeDownload = api;
 })(typeof window !== 'undefined' ? window : globalThis);
