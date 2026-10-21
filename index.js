@@ -1750,3 +1750,28 @@ function canInstallChromeExtension() {
   banner.hidden = false;
   document.body.classList.add('has-extension-banner');
 })();
+
+
+// Dismiss the service update independently of the extension promotion.
+(function setupDownloadApology() {
+  var notice = document.querySelector('#download-apology');
+  var close = document.querySelector('#download-apology-close');
+  if (!notice || !close) return;
+  var key = 'slowedrvb.downloadApologyDismissed.v1';
+  function hide() {
+    notice.hidden = true;
+    document.documentElement.classList.remove('has-service-notice');
+  }
+  try {
+    if (localStorage.getItem(key) === 'true') { hide(); return; }
+  } catch (e) {}
+  close.hidden = false;
+  close.addEventListener('click', function () {
+    hide();
+    try { localStorage.setItem(key, 'true'); } catch (e) {}
+    if (statusEl) {
+      statusEl.setAttribute('tabindex', '-1');
+      statusEl.focus({ preventScroll: true });
+    }
+  });
+})();

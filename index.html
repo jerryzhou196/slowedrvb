@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="has-service-notice">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -113,6 +113,32 @@
       width: 100%;
       max-width: 1080px;
     }
+
+    .service-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 16px 18px;
+      border: 1px solid var(--sub);
+      border-radius: 10px;
+      background: var(--sub-alt);
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+    .service-notice p { flex: 1; margin: 0; min-width: 0; }
+    .service-notice strong { color: var(--main); }
+    .service-notice button {
+      flex: 0 0 auto;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+    .service-notice button:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 
     /* two columns: vinyl left (50%), controls right (50%), matched heights */
     .layout {
@@ -825,6 +851,18 @@
         overflow: hidden;
       }
 
+      html.has-service-notice,
+      html.has-service-notice body {
+        height: auto;
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+      }
+      html.has-service-notice body { max-height: none; }
+      html.has-service-notice:not(.mobile-scroll-open) .card {
+        height: auto;
+        overflow: visible;
+      }
+
       .layout {
         display: block;
       }
@@ -901,6 +939,10 @@
     <button class="extension-banner-close" id="extension-banner-close" aria-label="hide">&times;</button>
   </div>
   <div class="card">
+    <aside class="service-notice" id="download-apology" aria-label="YouTube download update">
+      <p><strong>Sorry about the recent YouTube download issues.</strong> Downloads are working again. No app installation needed.</p>
+      <button type="button" id="download-apology-close" aria-label="Dismiss download update" hidden>&times;</button>
+    </aside>
     <div class="layout">
       <div class="vinyl-col">
         <div class="vinyl-player">
