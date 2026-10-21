@@ -80,7 +80,8 @@ var mobileChooseMp3 = document.querySelector('#btn-choose-mp3');
 var savedSongsList = document.querySelector('#saved-songs-list');
 var clearSongsBtn = document.querySelector('#btn-clear-songs');
 
-var YOUTUBE_DOWNLOAD_ENDPOINT = 'https://downloads.jerryzhou.ca/download';
+// Same-origin proxy (api/youtube-download.js) to the downloader on the Mac.
+var YOUTUBE_DOWNLOAD_ENDPOINT = '/api/youtube-download';
 var YOUTUBE_DB_NAME = 'slowedrvb-local-media';
 var YOUTUBE_STORE_NAME = 'youtube';
 var MOBILE_MORE_OPTIONS_KEY = 'slowedrvb.mobileMoreOptionsOpen';
@@ -1036,7 +1037,6 @@ window.download_youtube = async function (blurOnValidUrl) {
       YOUTUBE_DOWNLOAD_ENDPOINT + '?url=' + encodeURIComponent(sourceUrl),
       {
         signal: youtubeDownloadController ? youtubeDownloadController.signal : undefined,
-        headers: { 'X-Local-Download': '1' },
         onStatus: function (text) { setMobileStatus(text, 'streaming'); },
       }
     );
