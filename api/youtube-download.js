@@ -9,6 +9,8 @@
 // The response is streamed, so Vercel's 4.5 MB body limit doesn't apply.
 
 var Readable = require('node:stream').Readable;
+var crypto = require('node:crypto');
+var net = require('node:net');
 
 var REMOTE = (process.env.DOWNLOADS_TUNNEL_URL || 'https://downloads.jerryzhou.ca').replace(/\/+$/, '');
 var PASS_THROUGH = ['content-type', 'content-length', 'content-disposition', 'retry-after'];
@@ -24,6 +26,16 @@ module.exports = async function handler(req, res) {
   var url = new URL(req.url, 'http://x').searchParams.get('url') || '';
   if (!/^https?:\/\//i.test(url)) return send(res, 400, { detail: 'Enter a YouTube video URL' });
 
+  // Anonymous, first-party downloading-browser ID. It is not a person/account ID.
+  var cookie = String(req.headers.cookie || '').split(';').map(function (part) { return part.trim(); })
+    .find(function (part) { return part.startsWith('slowedrvb_download_visitor='); });
+  var visitor = cookie ? cookie.split('=')[1] : '';
+  if (!/^[a-f0-9]{32}$/.test(visitor)) visitor = crypto.randomBytes(16).toString('hex');
+  res.setHeader('Set-Cookie', 'slowedrvb_download_visitor=' + visitor + '; Max-Age=2592000; Path=/api/youtube-download; HttpOnly; Secure; SameSite=Lax');
+  // Vercel overwrites this at the edge. Never accept an incoming X-Download-Client-IP.
+  var clientIP = process.env.VERCEL === '1' ? String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() : '';
+  if (!net.isIP(clientIP)) clientIP = '';
+
   // Closing the tab or pressing cancel aborts the upstream request, which makes the
   // Mac stop that yt-dlp run.
   var controller = new AbortController();
@@ -32,7 +44,8 @@ module.exports = async function handler(req, res) {
   var upstream;
   try {
     upstream = await fetch(REMOTE + '/download?url=' + encodeURIComponent(url), {
-      headers: { 'X-Local-Download': '1', Authorization: 'Bearer ' + secret },
+      headers: { 'X-Local-Download': '1', Authorization: 'Bearer ' + secret,
+        'X-Download-Source': 'slowedrvb', 'X-Download-Visitor': visitor, 'X-Download-Client-IP': clientIP },
       signal: controller.signal,
     });
   } catch (e) {

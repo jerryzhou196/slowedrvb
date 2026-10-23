@@ -69,3 +69,27 @@ test('refuses to run without a secret or a link', async () => {
   assert.equal((await get()).status, 503);
   assert.equal(upstreamCalls.length, 0);
 });
+
+test('keeps the browser identity across requests without exposing the secret', async () => {
+  upstream(() => new Response('audio', {headers:{'content-type':'audio/mp4'}}));
+  const first=await get();await first.text();
+  const cookie=first.headers.get('set-cookie');
+  assert.match(cookie,/HttpOnly; Secure; SameSite=Lax/);
+  const pair=cookie.split(';')[0];
+  const visitor=upstreamCalls[0].headers['X-Download-Visitor'];
+  assert.match(visitor,/^[a-f0-9]{32}$/);
+  const second=await realFetch(base+'/api/youtube-download?url='+encodeURIComponent('https://www.youtube.com/watch?v=abc123xyz00'),{headers:{cookie:pair}});await second.text();
+  assert.equal(upstreamCalls[1].headers['X-Download-Visitor'],visitor);
+  assert.equal(upstreamCalls[1].headers['X-Download-Source'],'slowedrvb');
+  assert.equal(cookie.includes('s3cret'),false);
+});
+
+test('forwards platform client IP rather than browser-supplied analytics headers', async () => {
+  const before=process.env.VERCEL;process.env.VERCEL='1';
+  try {
+    upstream(() => new Response('audio',{headers:{'content-type':'audio/mp4'}}));
+    const res=await realFetch(base+'/api/youtube-download?url='+encodeURIComponent('https://www.youtube.com/watch?v=abc123xyz00'),{headers:{'x-forwarded-for':'8.8.8.8','x-download-client-ip':'1.1.1.1','x-download-visitor':'forged'}});await res.text();
+    assert.equal(upstreamCalls[0].headers['X-Download-Client-IP'],'8.8.8.8');
+    assert.notEqual(upstreamCalls[0].headers['X-Download-Visitor'],'forged');
+  } finally {if(before===undefined)delete process.env.VERCEL;else process.env.VERCEL=before;}
+});
